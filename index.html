@@ -102,11 +102,81 @@ ul { list-style: none; }
   font-size: 12px; color: var(--grey); font-family: var(--font-mono);
 }
 .btn-reset {
-  font-size: 11px; font-family: var(--font-mono); color: var(--grey);
-  padding: 4px 10px; border-radius: var(--r-pill); border: 1px solid rgba(255,255,255,0.15);
-  transition: var(--t);
+  font-size: 14px; font-family: var(--font-mono); color: var(--grey);
+  padding: 4px 8px; border-radius: var(--r-pill); border: 1px solid rgba(255,255,255,0.15);
+  transition: var(--t); line-height: 1;
 }
 .btn-reset:hover { color: var(--white); border-color: rgba(255,255,255,0.4); }
+
+/* ─── ROLE CHIP (mobile) ── */
+.role-chip-btn {
+  display: none;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--white);
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: var(--r-pill);
+  padding: 5px 10px;
+  transition: var(--t);
+  white-space: nowrap;
+}
+.role-chip-btn:hover { background: rgba(255,255,255,0.13); }
+.role-chip-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+}
+.role-chip-btn[data-role="instructor"] .role-chip-dot { background: var(--saffron); }
+.role-chip-btn[data-role="supervisor"] .role-chip-dot { background: #60a5fa; }
+.role-chip-btn[data-role="guest"]      .role-chip-dot { background: #4ade80; }
+.role-chip-chevron { opacity: 0.45; font-size: 9px; margin-left: 1px; }
+
+/* ─── ROLE POPOVER ── */
+#role-popover-backdrop {
+  display: none; position: fixed; inset: 0; z-index: 498;
+}
+#role-popover-backdrop.open { display: block; }
+#role-popover {
+  display: none;
+  position: fixed;
+  top: 52px; right: 12px;
+  background: #1c1c1e;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  z-index: 499;
+  min-width: 170px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.3);
+}
+#role-popover.open { display: block; }
+.role-popover-item {
+  display: flex; align-items: center; gap: 0;
+  padding: 13px 16px;
+  font-family: var(--font-mono); font-size: 12px; font-weight: 500;
+  color: var(--white);
+  background: none; border: none; width: 100%; text-align: left;
+  cursor: pointer; transition: background 0.12s;
+}
+.role-popover-item:not(:last-child) { border-bottom: 1px solid rgba(255,255,255,0.06); }
+.role-popover-item:hover { background: rgba(255,255,255,0.07); }
+.role-popover-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-right: 10px;
+}
+.role-popover-item[data-role="instructor"] .role-popover-dot { background: var(--saffron); }
+.role-popover-item[data-role="supervisor"] .role-popover-dot { background: #60a5fa; }
+.role-popover-item[data-role="guest"]      .role-popover-dot { background: #4ade80; }
+.role-popover-check { margin-left: auto; color: var(--saffron); font-size: 13px; opacity: 0; }
+.role-popover-item.active .role-popover-check { opacity: 1; }
+
+/* ─── RESPONSIVE ROLE BAR ── */
+@media (max-width: 767px) {
+  .role-tabs { display: none; }
+  .role-chip-btn { display: flex; }
+  .role-identity { display: none; }
+}
 
 /* ─── MAIN HEADER ── */
 #main-header {
@@ -212,7 +282,7 @@ ul { list-style: none; }
 .lesson-card.reported { border-left: 4px solid var(--verdigris); }
 
 .lc-time {
-  min-width: 60px; text-align: center;
+  min-width: 72px; text-align: center;
   padding-top: 2px;
 }
 .lc-time-main { font-size: 16px; font-weight: 600; font-family: var(--font-mono); color: var(--black); line-height: 1.2; }
@@ -314,30 +384,57 @@ textarea.form-field { resize: vertical; min-height: 80px; }
 
 /* ─── MODAL ── */
 .modal-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  position: fixed; inset: 0; background: rgba(0,0,0,0.45);
   display: flex; align-items: flex-end; justify-content: center;
   z-index: 500; opacity: 0; pointer-events: none;
-  transition: opacity 0.2s;
+  transition: opacity 0.28s;
+  backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
 }
 @media (min-width: 600px) {
   .modal-overlay { align-items: center; }
 }
 .modal-overlay.open { opacity: 1; pointer-events: all; }
 .modal {
-  background: var(--white); border-radius: 20px 20px 0 0;
-  width: 100%; max-width: 560px; max-height: 90vh;
-  overflow-y: auto; padding: 24px;
-  transform: translateY(40px); transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  background: var(--white); border-radius: 24px 24px 0 0;
+  width: 100%; max-width: 580px; max-height: 88vh;
+  display: flex; flex-direction: column; overflow: hidden;
+  transform: translateY(52px);
+  transition: transform 0.36s cubic-bezier(0.32, 0.72, 0, 1);
 }
 @media (min-width: 600px) {
-  .modal { border-radius: 16px; transform: scale(0.95); }
-  .modal-overlay.open .modal { transform: scale(1); }
+  .modal { border-radius: 20px; transform: translateY(12px) scale(0.97); max-height: 84vh; }
+  .modal-overlay.open .modal { transform: translateY(0) scale(1); }
 }
 .modal-overlay.open .modal { transform: translateY(0); }
-.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-.modal-title { font-family: var(--font-display); font-size: 22px; font-weight: 600; }
-.modal-close { width: 32px; height: 32px; border-radius: 50%; background: var(--pearl); color: var(--dark-grey); font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: var(--t); }
+.modal-drag-handle {
+  width: 36px; height: 4px; border-radius: 2px; background: var(--sand);
+  margin: 10px auto 0; flex-shrink: 0;
+}
+@media (min-width: 600px) { .modal-drag-handle { display: none; } }
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px 14px; border-bottom: 1px solid var(--pearl);
+  flex-shrink: 0;
+}
+.modal-title { font-family: var(--font-display); font-size: 20px; font-weight: 600; line-height: 1.2; }
+.modal-close {
+  width: 30px; height: 30px; border-radius: 50%; background: var(--pearl);
+  color: var(--dark-grey); font-size: 14px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: var(--t); flex-shrink: 0;
+}
 .modal-close:hover { background: var(--light-grey); }
+.modal-body {
+  flex: 1; overflow-y: auto; padding: 18px 20px 12px;
+  scrollbar-width: none; -ms-overflow-style: none;
+}
+.modal-body::-webkit-scrollbar { display: none; }
+.modal-footer {
+  flex-shrink: 0; padding: 12px 20px;
+  border-top: 1px solid var(--pearl);
+  display: flex; gap: 10px; background: var(--white);
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
+}
 
 /* ─── GUEST PROFILE INLINE ── */
 .guest-row {
@@ -389,7 +486,7 @@ textarea.form-field { resize: vertical; min-height: 80px; }
 .detail-header-title { font-family: var(--font-display); font-size: 22px; font-weight: 700; }
 .detail-header-sub { font-size: 13px; color: rgba(0,0,0,0.6); margin-top: 2px; }
 
-.detail-scroll { margin-top: 110px; padding: 20px 16px 80px; overflow-y: auto; }
+.detail-scroll { margin-top: 110px; padding: 20px 16px 80px; }
 @media (min-width: 768px) {
   .detail-scroll { padding: 24px 32px 80px; max-width: 960px; margin: 110px auto 0; }
   .detail-header { padding: 16px 32px; }
@@ -415,7 +512,7 @@ textarea.form-field { resize: vertical; min-height: 80px; }
   position: fixed; bottom: 0; left: 0; right: 0;
   background: var(--white); border-top: 1px solid var(--light-grey);
   padding: 12px 16px; display: flex; gap: 10px;
-  z-index: 150;
+  z-index: 150; box-shadow: 0 -4px 20px rgba(0,0,0,0.07);
 }
 @media (min-width: 768px) { .action-bar { max-width: 960px; left: 50%; transform: translateX(-50%); border-radius: 16px 16px 0 0; padding: 16px 32px; } }
 
@@ -427,7 +524,8 @@ textarea.form-field { resize: vertical; min-height: 80px; }
 .sup-table td { padding: 10px 14px; border-bottom: 1px solid var(--pearl); vertical-align: middle; }
 .sup-table tr:last-child td { border-bottom: none; }
 .sup-table tr:hover td { background: var(--pearl); }
-.sup-table-wrap { background: var(--white); border-radius: var(--r-card); border: 1px solid var(--light-grey); overflow: hidden; }
+.sup-table-wrap { background: var(--white); border-radius: var(--r-card); border: 1px solid var(--light-grey); overflow-x: auto; overflow-y: hidden; }
+.sup-table { min-width: 580px; }
 
 /* ─── INSTRUCTOR POOL ── */
 .pool-group { margin-bottom: 20px; }
@@ -478,6 +576,16 @@ textarea.form-field { resize: vertical; min-height: 80px; }
 }
 .level-btn:hover { border-color: var(--black); }
 .level-btn.selected { background: var(--black); color: var(--white); border-color: var(--black); }
+
+/* ─── SKILL TOGGLE BUTTONS ── */
+.skill-toggle-btn {
+  width: auto; padding: 6px 12px; font-size: 12px; font-weight: 600;
+  border-radius: 8px; border: 1.5px solid var(--light-grey);
+  background: var(--white); color: var(--dark-grey);
+  cursor: pointer; transition: var(--t); display: inline-flex; align-items: center;
+}
+.skill-toggle-btn:hover { border-color: var(--black); }
+.skill-toggle-btn.active { background: var(--black); color: var(--white); border-color: var(--black); }
 
 /* ─── GUEST PORTAL SPECIFIC ── */
 .upcoming-banner {
@@ -532,22 +640,41 @@ textarea.form-field { resize: vertical; min-height: 80px; }
 
   <!-- ROLE BAR -->
   <div id="role-bar">
-    <span class="role-bar-label">SnowOS v0</span>
+    <span class="role-bar-label">SnowOS</span>
     <div class="role-tabs">
-      <button class="role-tab" data-role="instructor" onclick="switchRole('instructor')">👨‍🏫 Instructor</button>
-      <button class="role-tab" data-role="supervisor" onclick="switchRole('supervisor')">🎯 Supervisor</button>
-      <button class="role-tab" data-role="guest" onclick="switchRole('guest')">👤 Guest</button>
+      <button class="role-tab" data-role="instructor" onclick="switchRole('instructor')">Instructor</button>
+      <button class="role-tab" data-role="supervisor" onclick="switchRole('supervisor')">Supervisor</button>
+      <button class="role-tab" data-role="guest" onclick="switchRole('guest')">Guest</button>
     </div>
     <div class="role-bar-spacer"></div>
     <div class="role-bar-right">
       <span class="role-identity" id="role-identity-label"></span>
-      <button class="btn-reset" onclick="resetData()">↺ Reset</button>
+      <button class="role-chip-btn" id="role-chip-btn" data-role="instructor" onclick="toggleRolePopover()">
+        <span class="role-chip-dot"></span>
+        <span id="role-chip-label">INSTRUCTOR</span>
+        <span class="role-chip-chevron">▾</span>
+      </button>
+      <button class="btn-reset" onclick="resetData()" title="Reset data">↺</button>
     </div>
+  </div>
+
+  <!-- ROLE POPOVER -->
+  <div id="role-popover-backdrop" onclick="closeRolePopover()"></div>
+  <div id="role-popover">
+    <button class="role-popover-item active" data-role="instructor" onclick="switchRole('instructor'); closeRolePopover()">
+      <span class="role-popover-dot"></span>Instructor<span class="role-popover-check">✓</span>
+    </button>
+    <button class="role-popover-item" data-role="supervisor" onclick="switchRole('supervisor'); closeRolePopover()">
+      <span class="role-popover-dot"></span>Supervisor<span class="role-popover-check">✓</span>
+    </button>
+    <button class="role-popover-item" data-role="guest" onclick="switchRole('guest'); closeRolePopover()">
+      <span class="role-popover-dot"></span>Guest<span class="role-popover-check">✓</span>
+    </button>
   </div>
 
   <!-- MAIN HEADER -->
   <div id="main-header">
-    <span class="header-brand">Ψ SnowOS</span>
+    <span class="header-brand">❄ SnowOS</span>
     <span class="header-title" id="header-title">Ski School Management</span>
     <div class="header-right">
       <span class="header-date" id="header-date"></span>
@@ -566,21 +693,10 @@ textarea.form-field { resize: vertical; min-height: 80px; }
         <div id="instr-lesson-list"></div>
       </div>
       <!-- Lesson Detail sub-view -->
-      <div id="instr-lesson-detail" style="display:none; position:fixed; inset:0; top:100px; background:var(--light-sand); z-index:50; overflow:hidden;">
+      <div id="instr-lesson-detail" style="display:none; position:fixed; inset:0; top:100px; background:var(--light-sand); z-index:50; overflow-y:auto; -webkit-overflow-scrolling:touch;">
         <div class="detail-header" id="instr-detail-header"></div>
         <div class="detail-scroll" id="instr-detail-body"></div>
         <div class="action-bar" id="instr-detail-actions"></div>
-      </div>
-      <!-- Guest Profile sub-view -->
-      <div id="instr-guest-profile" style="display:none; position:fixed; inset:0; top:100px; background:var(--light-sand); z-index:60; overflow:hidden;">
-        <div class="detail-header" id="instr-gp-header"></div>
-        <div class="detail-scroll" id="instr-gp-body"></div>
-      </div>
-      <!-- Report sub-view -->
-      <div id="instr-report-view" style="display:none; position:fixed; inset:0; top:100px; background:var(--light-sand); z-index:55; overflow:hidden;">
-        <div class="detail-header" id="instr-report-header"></div>
-        <div class="detail-scroll" id="instr-report-body"></div>
-        <div class="action-bar" id="instr-report-actions"></div>
       </div>
     </div>
 
@@ -1040,6 +1156,22 @@ function saveAppState() {
 }
 
 // ═══════════════════════════════════════════════════════
+// ROLE POPOVER
+// ═══════════════════════════════════════════════════════
+function toggleRolePopover() {
+  const open = $('role-popover').classList.contains('open');
+  open ? closeRolePopover() : openRolePopover();
+}
+function openRolePopover() {
+  $('role-popover').classList.add('open');
+  $('role-popover-backdrop').classList.add('open');
+}
+function closeRolePopover() {
+  $('role-popover').classList.remove('open');
+  $('role-popover-backdrop').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════════
 // ROLE SWITCHING
 // ═══════════════════════════════════════════════════════
 function switchRole(role) {
@@ -1047,6 +1179,14 @@ function switchRole(role) {
   document.querySelectorAll('.role-tab').forEach(t => t.classList.toggle('active', t.dataset.role===role));
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   $(`view-${role}`).classList.add('active');
+
+  // Sync chip & popover state
+  const labels = { instructor: 'INSTRUCTOR', supervisor: 'SUPERVISOR', guest: 'GUEST' };
+  $('role-chip-label').textContent = labels[role];
+  $('role-chip-btn').dataset.role = role;
+  document.querySelectorAll('.role-popover-item').forEach(el =>
+    el.classList.toggle('active', el.dataset.role === role)
+  );
 
   // Reset sub-views
   if (role==='instructor') {
@@ -1108,8 +1248,7 @@ function renderInstructor() {
 function showInstrSchedule() {
   $('instr-schedule').style.display = 'block';
   $('instr-lesson-detail').style.display = 'none';
-  $('instr-guest-profile').style.display = 'none';
-  $('instr-report-view').style.display = 'none';
+  closeModal();
 }
 
 function renderInstrSchedule() {
@@ -1187,8 +1326,6 @@ function openLessonDetail(lessonId) {
   const bookings = Store.getBookings(lessonId);
   const guests = Store.getGuests(bookings.map(b=>b.guest_id));
   const asgns = Store.getAssignments(lessonId);
-  const isMultiInstructor = asgns.length > 1;
-
   $('instr-schedule').style.display = 'none';
   $('instr-lesson-detail').style.display = 'block';
 
@@ -1206,12 +1343,11 @@ function openLessonDetail(lessonId) {
     <div class="info-cell"><div class="info-cell-label">Status</div><div class="info-cell-value">${statusBadge(lesson.status)}</div></div>
   </div>`;
 
-  // Discipline / level
-  const detailMeta = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+  // Discipline / type / level badges for detail body
+  const detailBadges = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
     ${disciplineLabel(tpl.discipline_id)}
     ${typeLabel(tpl.lesson_type)}
     ${tpl.level_numeric ? levelLabel(tpl.level_numeric) : ''}
-    ${statusBadge(lesson.status)}
   </div>`;
 
   // Co-instructors
@@ -1247,10 +1383,11 @@ function openLessonDetail(lessonId) {
   })() : '';
 
   $('instr-detail-body').innerHTML = `
+    ${detailBadges}
     ${infoGrid}
     <div class="subsection-heading">Instructors (${asgns.length})</div>
     <div class="card mb-16"><div style="padding:12px 16px;">${coInstrs || '<div class="text-sm text-mid">No instructors assigned</div>'}</div></div>
-    <div class="subsection-heading">Guests (${guests.length})${isMulti?' — tap checkboxes to select your group':''}</div>
+    <div class="subsection-heading">Guests (${guests.length})${isMulti?' — tap a guest to select your sub-group':''}</div>
     <div class="card">${guestList || '<div class="empty-state"><span>No guests booked</span></div>'}</div>
     ${reportSection}`;
 
@@ -1301,18 +1438,7 @@ function openGuestProfile(guestId) {
   if (!guest) return;
   const entries = Store.getGuestReportEntries(guestId);
   const latestLevel = entries.length ? entries[0].recommended_level : guest.ability_level;
-
-  $('instr-guest-profile').style.display = 'block';
-
-  $('instr-gp-header').innerHTML = `
-    <div class="detail-back" onclick="closeGuestProfile()">← Back to Lesson</div>
-    <div style="display:flex;align-items:center;gap:12px;margin-top:6px;">
-      ${buildAvatar(guest.name,'lg')}
-      <div>
-        <div class="detail-header-title">${guest.name}</div>
-        <div class="detail-header-sub">Age ${guest.age} · ${['','Beginner','Level 1','Level 2','Level 3','Level 4','Level 5','Expert'][latestLevel]||''}</div>
-      </div>
-    </div>`;
+  const levelName = ['','Beginner','Level 1','Level 2','Level 3','Level 4','Level 5','Expert'][latestLevel] || '';
 
   const historyHtml = entries.length ? entries.map(e => `
     <div class="history-item">
@@ -1327,20 +1453,31 @@ function openGuestProfile(guestId) {
       ${e.instructor ? `<div class="text-xs mt-8">Instructor: ${e.instructor.name}</div>` : ''}
       ${e.report?.terrain ? `<div class="text-xs mt-8">Terrain: ${e.report.terrain}</div>` : ''}
       ${e.report?.skills?.length ? `<div class="text-xs mt-8">Skills: ${e.report.skills.join(', ')}</div>` : ''}
-    </div>`) : `<div class="empty-state"><span class="empty-state-icon">📋</span><div class="empty-state-title">No lesson history yet</div></div>`;
+    </div>`).join('') : `<div class="empty-state"><span class="empty-state-icon">📋</span><div class="empty-state-title">No lesson history yet</div></div>`;
 
-  $('instr-gp-body').innerHTML = `
-    <div class="info-grid">
-      <div class="info-cell"><div class="info-cell-label">Current Level</div><div class="info-cell-value">${levelLabel(latestLevel)}</div></div>
-      <div class="info-cell"><div class="info-cell-label">Lessons</div><div class="info-cell-value">${entries.length}</div></div>
-      <div class="info-cell"><div class="info-cell-label">Nationality</div><div class="info-cell-value">${guest.nationality||'—'}</div></div>
-      <div class="info-cell"><div class="info-cell-label">Stay</div><div class="info-cell-value" style="font-size:12px;">${guest.stay_end || '—'}</div></div>
+  openModal(`
+    <div class="modal-drag-handle"></div>
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:12px;">
+        ${buildAvatar(guest.name,'md')}
+        <div>
+          <div class="modal-title">${guest.name}</div>
+          <div style="font-size:13px;color:var(--mid-grey);margin-top:1px;">Age ${guest.age} · ${levelName}</div>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
-    <div class="subsection-heading">Lesson History (${entries.length})</div>
-    ${historyHtml}`;
-}
-function closeGuestProfile() {
-  $('instr-guest-profile').style.display = 'none';
+    <div class="modal-body">
+      <div class="info-grid" style="margin-bottom:20px;">
+        <div class="info-cell"><div class="info-cell-label">Current Level</div><div class="info-cell-value">${levelLabel(latestLevel)}</div></div>
+        <div class="info-cell"><div class="info-cell-label">Lessons</div><div class="info-cell-value">${entries.length}</div></div>
+        <div class="info-cell"><div class="info-cell-label">Nationality</div><div class="info-cell-value">${guest.nationality||'—'}</div></div>
+        <div class="info-cell"><div class="info-cell-label">Stay Until</div><div class="info-cell-value" style="font-size:12px;">${guest.stay_end||'—'}</div></div>
+      </div>
+      <div class="subsection-heading" style="margin-top:0;">Lesson History (${entries.length})</div>
+      ${historyHtml}
+    </div>
+  `);
 }
 
 // ─── LESSON REPORT ───────────────────────────────────────
@@ -1351,15 +1488,7 @@ function openReport(lessonId) {
   const bookings = Store.getBookings(lessonId);
   const guests = Store.getGuests(bookings.map(b=>b.guest_id));
   const isReadOnly = lesson.status === 'reported';
-
-  $('instr-schedule').style.display = 'none';
-  $('instr-lesson-detail').style.display = 'none';
-  $('instr-report-view').style.display = 'block';
-
-  $('instr-report-header').innerHTML = `
-    <div class="detail-back" onclick="closeReport()">← Back to Lesson</div>
-    <div class="detail-header-title">${isReadOnly?'Lesson Report':'Submit Report'}: ${tpl.name}</div>
-    <div class="detail-header-sub">${lesson.date ? new Date(lesson.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'}) : ''}</div>`;
+  const lessonDateStr = lesson.date ? new Date(lesson.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'}) : '';
 
   // Load draft or existing report
   const existingReport = Store.getReport(lessonId);
@@ -1393,8 +1522,8 @@ function openReport(lessonId) {
   }).join('');
 
   const ro = isReadOnly ? 'readonly' : '';
-  $('instr-report-body').innerHTML = `
-    <div class="subsection-heading">Shared Lesson Details</div>
+  const bodyHtml = `
+    <div class="subsection-heading" style="margin-top:0;">Shared Lesson Details</div>
     <div class="form-group">
       <label class="form-label">Terrain Skied</label>
       <select class="form-field" id="report-terrain" ${isReadOnly?'disabled':''} onchange="autoSaveDraft('${lessonId}')">
@@ -1405,7 +1534,7 @@ function openReport(lessonId) {
     <div class="form-group">
       <label class="form-label">Skills Worked On</label>
       <div style="display:flex;flex-wrap:wrap;gap:6px;" id="skills-wrap">
-        ${skillOptions.map(s=>`<button class="level-btn" style="width:auto;padding:6px 12px;font-size:12px;" onclick="toggleSkill(this,'${s}')" data-skill="${s}" data-selected="${(base.skills||[]).includes(s)?'1':'0'}" style="${(base.skills||[]).includes(s)?'background:var(--black);color:var(--white)':''}">${s}</button>`).join('')}
+        ${skillOptions.map(s=>`<button class="skill-toggle-btn${(base.skills||[]).includes(s)?' active':''}" onclick="toggleSkill(this)" data-skill="${s}" data-selected="${(base.skills||[]).includes(s)?'1':'0'}">${s}</button>`).join('')}
       </div>
     </div>
     <div class="form-group">
@@ -1414,19 +1543,25 @@ function openReport(lessonId) {
     </div>
     <div class="divider"></div>
     <div class="subsection-heading">Per-Guest Assessment</div>
-    ${guestFields}
-    ${isReadOnly ? '' : '<div style="height:80px;"></div>'}`;
+    ${guestFields}`;
 
-  // Mark skill buttons
-  setTimeout(() => {
-    document.querySelectorAll('[data-selected="1"]').forEach(btn => {
-      btn.style.background = 'var(--black)'; btn.style.color = 'var(--white)';
-    });
-  }, 50);
+  const footerHtml = isReadOnly
+    ? `<div style="text-align:center;font-size:12px;color:var(--mid-grey);font-family:var(--font-mono);letter-spacing:0.5px;width:100%;padding:2px 0;">READ ONLY — Report already submitted</div>`
+    : `<button class="btn btn-outline" onclick="autoSaveDraft('${lessonId}');showToast('Draft saved ✓')">Save Draft</button>
+       <button class="btn btn-primary" style="flex:1;" onclick="submitReport('${lessonId}')">Submit Report →</button>`;
 
-  $('instr-report-actions').innerHTML = isReadOnly ? '' : `
-    <button class="btn btn-outline" onclick="autoSaveDraft('${lessonId}');showToast('Draft saved ✓')">Save Draft</button>
-    <button class="btn btn-primary" style="flex:1;" onclick="submitReport('${lessonId}')">Submit Report →</button>`;
+  openModal(`
+    <div class="modal-drag-handle"></div>
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">${isReadOnly ? 'Lesson Report' : 'Submit Report'}</div>
+        <div style="font-size:13px;color:var(--mid-grey);margin-top:2px;">${tpl.name} · ${lessonDateStr}</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">${bodyHtml}</div>
+    <div class="modal-footer">${footerHtml}</div>
+  `);
 }
 
 function selectLevel(guestId, level) {
@@ -1440,8 +1575,7 @@ function selectLevel(guestId, level) {
 function toggleSkill(btn) {
   const isSelected = btn.dataset.selected === '1';
   btn.dataset.selected = isSelected ? '0' : '1';
-  btn.style.background = isSelected ? '' : 'var(--black)';
-  btn.style.color = isSelected ? '' : 'var(--white)';
+  btn.classList.toggle('active', !isSelected);
   autoSaveDraft(App.instrReportLessonId);
 }
 
@@ -1474,14 +1608,11 @@ function submitReport(lessonId) {
   Store.updateLessonStatus(lessonId, 'reported');
   Store.clearDraft(lessonId);
   showToast('Report submitted ✓');
-  closeReport();
+  closeModal();
   openLessonDetail(lessonId);
 }
 
-function closeReport() {
-  $('instr-report-view').style.display = 'none';
-  $('instr-lesson-detail').style.display = 'block';
-}
+function closeReport() { closeModal(); }
 
 // ═══════════════════════════════════════════════════════
 // SUPERVISOR VIEW
@@ -1617,13 +1748,18 @@ function openAssignModal(lessonId) {
   }).join('');
 
   openModal(`
+    <div class="modal-drag-handle"></div>
     <div class="modal-header">
-      <div class="modal-title">Assign Instructors</div>
+      <div>
+        <div class="modal-title">Assign Instructors</div>
+        <div style="font-size:13px;color:var(--mid-grey);margin-top:2px;"><strong>${tpl?.name}</strong> · ${lesson.start_time}</div>
+      </div>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
-    <div class="text-sm text-mid mb-16"><strong>${tpl?.name}</strong> · ${lesson.start_time}</div>
-    <div class="subsection-heading">Current: ${current.length} assigned</div>
-    ${rows}
+    <div class="modal-body">
+      <div class="subsection-heading" style="margin-top:0;">Currently assigned: ${current.length}</div>
+      ${rows}
+    </div>
   `);
 }
 
@@ -1666,7 +1802,7 @@ function renderGuest() {
   $('guest-stats').innerHTML = `
     <div class="stat-card"><div class="stat-value">${entries.length}</div><div class="stat-label">Lessons Done</div></div>
     <div class="stat-card"><div class="stat-value" style="color:var(--saffron)">${upcomingCount}</div><div class="stat-label">Upcoming</div></div>
-    <div class="stat-card"><div class="stat-value">${levelLabel(latestLevel)}</div><div class="stat-label" style="margin-top:6px;">Current Level</div></div>`;
+    <div class="stat-card"><div class="stat-value">${latestLevel}</div><div class="stat-label">Current Level</div></div>`;
 
   if (App.guestTab==='upcoming') renderGuestUpcoming();
   else if (App.guestTab==='book') renderGuestBook();
@@ -1804,7 +1940,7 @@ function renderGuestProfile() {
   const levelNames = {1:'Beginner',2:'Level 1',3:'Level 2',4:'Level 3',5:'Level 4',6:'Level 5',7:'Expert'};
 
   $('guest-profile-panel').innerHTML = `
-    <div style="text-align:center;padding:24px 0 16px;">
+    <div style="display:flex;flex-direction:column;align-items:center;padding:24px 0 16px;">
       ${buildAvatar(guest.name,'lg')}
       <div style="font-family:var(--font-display);font-size:24px;font-weight:700;margin-top:12px;">${guest.name}</div>
       <div class="text-sm text-mid">${guest.nationality||''} · Age ${guest.age}</div>
@@ -1813,7 +1949,7 @@ function renderGuestProfile() {
       <div class="info-cell"><div class="info-cell-label">Current Level</div><div class="info-cell-value">${levelLabel(latestLevel)}</div></div>
       <div class="info-cell"><div class="info-cell-label">Lessons Taken</div><div class="info-cell-value">${entries.length}</div></div>
       <div class="info-cell"><div class="info-cell-label">Stay Until</div><div class="info-cell-value">${guest.stay_end||'—'}</div></div>
-      <div class="info-cell"><div class="info-cell-label">Level Name</div><div class="info-cell-value">${levelNames[latestLevel]||'—'}</div></div>
+      <div class="info-cell"><div class="info-cell-label">Nationality</div><div class="info-cell-value">${guest.nationality||'—'}</div></div>
     </div>
     <div class="subsection-heading">Progress Journey</div>
     <div class="card">
