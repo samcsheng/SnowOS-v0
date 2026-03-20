@@ -1,0 +1,1864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>SnowOS — Ski School Management</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════
+   DESIGN TOKENS
+═══════════════════════════════════════════════════════ */
+:root {
+  --black:       #000000;
+  --ultramarine: #1E2643;
+  --lavender:    #9EAEF4;
+  --verdigris:   #ACBEB9;
+  --sand:        #D5CDC2;
+  --light-sand:  #F6EFE7;
+  --saffron:     #FDBE00;
+  --sienna:      #9D432C;
+  --dark-grey:   #333333;
+  --mid-grey:    #666666;
+  --grey:        #999999;
+  --light-grey:  #CCCCCC;
+  --pearl:       #F8F8F8;
+  --white:       #FFFFFF;
+  --green:       #088A20;
+  --red:         #BF2F17;
+  --orange:      #C75300;
+  --font-display: 'Cormorant Garamond', serif;
+  --font-body:    'DM Sans', sans-serif;
+  --font-mono:    'DM Mono', monospace;
+  --r-pill: 999px;
+  --r-card: 12px;
+  --r-input: 8px;
+  --t: 0.18s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ═══════════════════════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; }
+body {
+  font-family: var(--font-body);
+  background: var(--light-sand);
+  color: var(--black);
+  font-size: 15px;
+  line-height: 1.5;
+  height: 100%;
+  overflow-x: hidden;
+}
+button { font-family: var(--font-body); cursor: pointer; border: none; background: none; }
+input, select, textarea { font-family: var(--font-body); }
+a { color: inherit; text-decoration: none; }
+ul { list-style: none; }
+
+/* ═══════════════════════════════════════════════════════
+   LAYOUT SHELL
+═══════════════════════════════════════════════════════ */
+#app { display: flex; flex-direction: column; min-height: 100vh; }
+
+/* ─── ROLE BAR ── */
+#role-bar {
+  background: var(--black);
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  gap: 0;
+  height: 44px;
+  padding: 0 16px;
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+}
+.role-bar-label {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--grey);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-right: 12px;
+  white-space: nowrap;
+}
+.role-tabs { display: flex; gap: 4px; }
+.role-tab {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: var(--r-pill);
+  color: var(--grey);
+  background: transparent;
+  transition: var(--t);
+  white-space: nowrap;
+}
+.role-tab:hover { color: var(--white); background: rgba(255,255,255,0.1); }
+.role-tab.active { background: var(--saffron); color: var(--black); font-weight: 600; }
+.role-bar-spacer { flex: 1; }
+.role-bar-right { display: flex; align-items: center; gap: 8px; }
+.role-identity {
+  font-size: 12px; color: var(--grey); font-family: var(--font-mono);
+}
+.btn-reset {
+  font-size: 11px; font-family: var(--font-mono); color: var(--grey);
+  padding: 4px 10px; border-radius: var(--r-pill); border: 1px solid rgba(255,255,255,0.15);
+  transition: var(--t);
+}
+.btn-reset:hover { color: var(--white); border-color: rgba(255,255,255,0.4); }
+
+/* ─── MAIN HEADER ── */
+#main-header {
+  background: var(--saffron);
+  padding: 0 16px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  position: fixed;
+  top: 44px; left: 0; right: 0;
+  z-index: 190;
+  border-bottom: 2px solid rgba(0,0,0,0.08);
+}
+.header-brand {
+  font-family: var(--font-display);
+  font-size: 26px; font-weight: 700;
+  color: var(--black);
+  letter-spacing: -0.5px;
+  margin-right: 16px;
+}
+.header-title {
+  font-size: 14px; font-weight: 600;
+  color: rgba(0,0,0,0.6);
+}
+.header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.header-date { font-size: 12px; font-family: var(--font-mono); color: rgba(0,0,0,0.55); }
+
+/* ─── PAGE BODY ── */
+#page-body {
+  margin-top: 100px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ═══════════════════════════════════════════════════════
+   VIEWS
+═══════════════════════════════════════════════════════ */
+.view { display: none; flex: 1; flex-direction: column; }
+.view.active { display: flex; }
+
+/* ─── SCROLL CONTAINER ── */
+.scroll-view {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 16px 80px;
+}
+@media (min-width: 768px) {
+  .scroll-view { padding: 28px 32px 80px; max-width: 960px; margin: 0 auto; width: 100%; }
+}
+
+/* ═══════════════════════════════════════════════════════
+   COMMON COMPONENTS
+═══════════════════════════════════════════════════════ */
+
+/* ─── SECTION TITLE ── */
+.section-heading {
+  font-family: var(--font-display);
+  font-size: 22px; font-weight: 600;
+  color: var(--black);
+  margin-bottom: 16px;
+  display: flex; align-items: center; gap: 10px;
+}
+.section-heading small {
+  font-family: var(--font-body);
+  font-size: 12px; font-weight: 400;
+  color: var(--mid-grey);
+  font-style: normal;
+}
+.subsection-heading {
+  font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 1.2px;
+  color: var(--mid-grey); font-family: var(--font-mono);
+  margin: 20px 0 10px;
+}
+
+/* ─── CARDS ── */
+.card {
+  background: var(--white);
+  border-radius: var(--r-card);
+  border: 1px solid var(--light-grey);
+  overflow: hidden;
+}
+.card + .card { margin-top: 10px; }
+
+/* ─── LESSON CARD ── */
+.lesson-card {
+  background: var(--white);
+  border-radius: var(--r-card);
+  border: 1px solid var(--light-grey);
+  padding: 16px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: var(--t);
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.lesson-card:hover { border-color: var(--sand); box-shadow: 0 4px 16px rgba(0,0,0,0.07); transform: translateY(-1px); }
+.lesson-card.active-lesson { border-left: 4px solid var(--saffron); }
+.lesson-card.in-progress { border-left: 4px solid var(--green); }
+.lesson-card.completed { border-left: 4px solid var(--lavender); }
+.lesson-card.reported { border-left: 4px solid var(--verdigris); }
+
+.lc-time {
+  min-width: 60px; text-align: center;
+  padding-top: 2px;
+}
+.lc-time-main { font-size: 16px; font-weight: 600; font-family: var(--font-mono); color: var(--black); line-height: 1.2; }
+.lc-time-end { font-size: 11px; color: var(--grey); font-family: var(--font-mono); }
+.lc-body { flex: 1; min-width: 0; }
+.lc-name { font-size: 15px; font-weight: 600; color: var(--black); }
+.lc-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.lc-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+
+/* ─── STATUS BADGE ── */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 600;
+  padding: 3px 9px; border-radius: var(--r-pill);
+  white-space: nowrap;
+}
+.badge-scheduled  { background: var(--pearl);     color: var(--dark-grey); border: 1px solid var(--light-grey); }
+.badge-in_progress{ background: #e8f7ec;           color: var(--green);     border: 1px solid #b3e5bf; }
+.badge-completed  { background: #edf0fd;           color: #3a4fb5;          border: 1px solid #c0c9f8; }
+.badge-reported   { background: var(--light-sand); color: var(--sienna);    border: 1px solid var(--sand); }
+.badge-kids       { background: #fff3e0; color: var(--orange); border: 1px solid #ffcc80; }
+.badge-adult      { background: #e8eaf6; color: var(--ultramarine); border: 1px solid #c5cae9; }
+.badge-private    { background: var(--light-sand); color: var(--sienna); border: 1px solid var(--sand); }
+.badge-ski        { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
+.badge-sb         { background: #fce4ec; color: #880e4f; border: 1px solid #f48fb1; }
+.badge-flag       { background: #fff3cd; color: #856404; border: 1px solid #ffc107; }
+.badge-dot::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; margin-right: 3px; }
+
+/* ─── PILL TAGS ── */
+.pill { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: var(--r-pill); }
+.pill-level { background: var(--black); color: var(--white); font-family: var(--font-mono); font-size: 11px; }
+.pill-guests { background: var(--pearl); color: var(--dark-grey); border: 1px solid var(--light-grey); }
+.pill-loc { background: var(--light-sand); color: var(--dark-grey); border: 1px solid var(--sand); font-size: 11px; }
+.pill-instructors { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; font-size: 11px; }
+
+/* ─── BUTTONS ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 14px; font-weight: 600;
+  padding: 10px 20px; border-radius: var(--r-pill);
+  transition: var(--t); cursor: pointer; border: none;
+}
+.btn-primary { background: var(--saffron); color: var(--black); }
+.btn-primary:hover { background: #e6ac00; }
+.btn-dark { background: var(--black); color: var(--white); }
+.btn-dark:hover { background: var(--dark-grey); }
+.btn-outline { background: var(--white); color: var(--black); border: 1.5px solid var(--black); }
+.btn-outline:hover { background: var(--pearl); }
+.btn-ghost { background: transparent; color: var(--dark-grey); padding: 8px 12px; }
+.btn-ghost:hover { background: var(--pearl); border-radius: var(--r-pill); }
+.btn-danger { background: var(--red); color: var(--white); }
+.btn-danger:hover { background: #a02b15; }
+.btn-green { background: var(--green); color: var(--white); }
+.btn-green:hover { background: #067318; }
+.btn-sm { font-size: 12px; padding: 6px 14px; }
+.btn-lg { font-size: 16px; padding: 14px 28px; }
+.btn-full { width: 100%; justify-content: center; }
+.btn:disabled { opacity: 0.45; pointer-events: none; }
+
+/* ─── FORM ELEMENTS ── */
+.form-group { margin-bottom: 16px; }
+.form-label { font-size: 13px; font-weight: 600; color: var(--black); display: block; margin-bottom: 4px; }
+.form-helper { font-size: 12px; color: var(--mid-grey); margin-bottom: 4px; display: block; }
+.form-field {
+  width: 100%; padding: 10px 14px;
+  font-family: var(--font-body); font-size: 14px;
+  border: 1.5px solid var(--light-grey); border-radius: var(--r-input);
+  background: var(--white); color: var(--black);
+  outline: none; transition: border-color var(--t);
+  appearance: none;
+}
+.form-field:focus { border-color: var(--black); }
+select.form-field { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23666' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+textarea.form-field { resize: vertical; min-height: 80px; }
+.form-error { font-size: 12px; color: var(--red); margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+
+/* ─── GUEST AVATAR ── */
+.avatar {
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-weight: 600; color: var(--white); flex-shrink: 0; font-size: 13px;
+  background: var(--ultramarine);
+}
+.avatar-sm { width: 32px; height: 32px; font-size: 11px; }
+.avatar-md { width: 40px; height: 40px; font-size: 13px; }
+.avatar-lg { width: 52px; height: 52px; font-size: 16px; }
+.avatar-colors { background: linear-gradient(135deg, var(--ultramarine) 0%, #2d3b6b 100%); }
+
+/* ─── DIVIDER ── */
+.divider { height: 1px; background: var(--light-grey); margin: 16px 0; }
+
+/* ─── EMPTY STATE ── */
+.empty-state {
+  text-align: center; padding: 48px 24px;
+  color: var(--grey);
+}
+.empty-state-icon { font-size: 40px; margin-bottom: 12px; display: block; }
+.empty-state-title { font-size: 15px; font-weight: 600; color: var(--mid-grey); margin-bottom: 6px; }
+.empty-state-text { font-size: 13px; }
+
+/* ─── MODAL ── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  display: flex; align-items: flex-end; justify-content: center;
+  z-index: 500; opacity: 0; pointer-events: none;
+  transition: opacity 0.2s;
+}
+@media (min-width: 600px) {
+  .modal-overlay { align-items: center; }
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--white); border-radius: 20px 20px 0 0;
+  width: 100%; max-width: 560px; max-height: 90vh;
+  overflow-y: auto; padding: 24px;
+  transform: translateY(40px); transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
+}
+@media (min-width: 600px) {
+  .modal { border-radius: 16px; transform: scale(0.95); }
+  .modal-overlay.open .modal { transform: scale(1); }
+}
+.modal-overlay.open .modal { transform: translateY(0); }
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.modal-title { font-family: var(--font-display); font-size: 22px; font-weight: 600; }
+.modal-close { width: 32px; height: 32px; border-radius: 50%; background: var(--pearl); color: var(--dark-grey); font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: var(--t); }
+.modal-close:hover { background: var(--light-grey); }
+
+/* ─── GUEST PROFILE INLINE ── */
+.guest-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; border-bottom: 1px solid var(--pearl);
+  cursor: pointer; transition: var(--t);
+}
+.guest-row:last-child { border-bottom: none; }
+.guest-row:hover { background: var(--pearl); }
+.guest-row-info { flex: 1; min-width: 0; }
+.guest-row-name { font-size: 14px; font-weight: 600; }
+.guest-row-meta { font-size: 12px; color: var(--mid-grey); margin-top: 1px; }
+.guest-row-right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+
+/* ─── CHECKBOX ── */
+.check-box {
+  width: 20px; height: 20px; border-radius: 5px;
+  border: 2px solid var(--light-grey); background: var(--white);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: var(--t); flex-shrink: 0;
+}
+.check-box.checked { background: var(--black); border-color: var(--black); color: var(--white); font-size: 12px; }
+
+/* ─── DATE PICKER ROW ── */
+.date-nav {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--white); border: 1px solid var(--light-grey);
+  border-radius: var(--r-pill); padding: 6px 14px; width: fit-content; margin-bottom: 20px;
+}
+.date-nav-btn { width: 28px; height: 28px; border-radius: 50%; background: var(--pearl); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: var(--t); font-size: 14px; }
+.date-nav-btn:hover { background: var(--sand); }
+.date-nav-text { font-size: 13px; font-weight: 600; font-family: var(--font-mono); min-width: 100px; text-align: center; }
+.date-nav-today { font-size: 11px; padding: 3px 9px; border-radius: var(--r-pill); background: var(--saffron); color: var(--black); font-weight: 600; cursor: pointer; transition: var(--t); }
+.date-nav-today:hover { background: #e6ac00; }
+
+/* ─── DETAIL HEADER ── */
+.detail-header {
+  background: var(--saffron);
+  padding: 16px;
+  position: fixed; top: 100px; left: 0; right: 0;
+  z-index: 100;
+}
+.detail-back {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  color: rgba(0,0,0,0.65); transition: var(--t); margin-bottom: 8px;
+}
+.detail-back:hover { color: var(--black); }
+.detail-header-title { font-family: var(--font-display); font-size: 22px; font-weight: 700; }
+.detail-header-sub { font-size: 13px; color: rgba(0,0,0,0.6); margin-top: 2px; }
+
+.detail-scroll { margin-top: 110px; padding: 20px 16px 80px; overflow-y: auto; }
+@media (min-width: 768px) {
+  .detail-scroll { padding: 24px 32px 80px; max-width: 960px; margin: 110px auto 0; }
+  .detail-header { padding: 16px 32px; }
+}
+
+/* ─── INFO GRID ── */
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+.info-cell { background: var(--pearl); border-radius: 10px; padding: 12px; }
+.info-cell-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--mid-grey); font-family: var(--font-mono); margin-bottom: 4px; }
+.info-cell-value { font-size: 15px; font-weight: 600; }
+
+/* ─── PROGRESS HISTORY ── */
+.history-item {
+  background: var(--white); border-radius: 10px; border: 1px solid var(--light-grey);
+  padding: 16px; margin-bottom: 10px;
+}
+.history-item-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.history-item-date { font-size: 12px; font-family: var(--font-mono); color: var(--mid-grey); }
+.history-item-notes { font-size: 13px; color: var(--dark-grey); line-height: 1.6; }
+
+/* ─── ACTION BAR ── */
+.action-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--white); border-top: 1px solid var(--light-grey);
+  padding: 12px 16px; display: flex; gap: 10px;
+  z-index: 150;
+}
+@media (min-width: 768px) { .action-bar { max-width: 960px; left: 50%; transform: translateX(-50%); border-radius: 16px 16px 0 0; padding: 16px 32px; } }
+
+/* ─── SUPERVISOR TABLE ── */
+.sup-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.sup-table th { background: var(--black); color: var(--white); padding: 10px 14px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+.sup-table th:first-child { border-radius: 8px 0 0 0; }
+.sup-table th:last-child { border-radius: 0 8px 0 0; }
+.sup-table td { padding: 10px 14px; border-bottom: 1px solid var(--pearl); vertical-align: middle; }
+.sup-table tr:last-child td { border-bottom: none; }
+.sup-table tr:hover td { background: var(--pearl); }
+.sup-table-wrap { background: var(--white); border-radius: var(--r-card); border: 1px solid var(--light-grey); overflow: hidden; }
+
+/* ─── INSTRUCTOR POOL ── */
+.pool-group { margin-bottom: 20px; }
+.pool-instructor-card {
+  background: var(--white); border: 1px solid var(--light-grey);
+  border-radius: 10px; padding: 12px 14px;
+  display: flex; align-items: center; gap: 12px; margin-bottom: 8px;
+  transition: var(--t);
+}
+.pool-instructor-card:hover { border-color: var(--sand); }
+.pool-instructor-info { flex: 1; }
+.pool-instructor-name { font-size: 14px; font-weight: 600; }
+.pool-instructor-meta { font-size: 12px; color: var(--mid-grey); margin-top: 1px; }
+
+/* ─── TABS ── */
+.tab-bar { display: flex; background: var(--pearl); border-radius: var(--r-pill); padding: 4px; gap: 2px; margin-bottom: 20px; border: 1px solid var(--light-grey); }
+.tab-btn { flex: 1; font-size: 13px; font-weight: 500; padding: 7px 12px; border-radius: var(--r-pill); color: var(--dark-grey); background: transparent; transition: var(--t); text-align: center; }
+.tab-btn.active { background: var(--black); color: var(--white); font-weight: 600; }
+.tab-btn:hover:not(.active) { background: rgba(0,0,0,0.06); }
+
+/* ─── TOAST ── */
+.toast {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--black); color: var(--white);
+  font-size: 13px; font-weight: 500; padding: 10px 20px; border-radius: var(--r-pill);
+  z-index: 1000; opacity: 0; transition: opacity 0.2s, transform 0.2s; pointer-events: none;
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ─── GUEST BOOK CARD ── */
+.book-card {
+  background: var(--white); border: 1px solid var(--light-grey); border-radius: var(--r-card);
+  padding: 16px; margin-bottom: 10px; transition: var(--t);
+}
+.book-card:hover { border-color: var(--sand); box-shadow: 0 3px 12px rgba(0,0,0,0.06); }
+
+/* ─── REPORT FORM ── */
+.report-guest-section {
+  background: var(--pearl); border-radius: 10px; padding: 16px; margin-bottom: 12px;
+}
+.report-guest-name { font-size: 14px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.level-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+.level-btn {
+  width: 36px; height: 36px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  background: var(--white); color: var(--dark-grey); border: 1.5px solid var(--light-grey);
+  cursor: pointer; transition: var(--t); display: flex; align-items: center; justify-content: center;
+}
+.level-btn:hover { border-color: var(--black); }
+.level-btn.selected { background: var(--black); color: var(--white); border-color: var(--black); }
+
+/* ─── GUEST PORTAL SPECIFIC ── */
+.upcoming-banner {
+  background: linear-gradient(135deg, var(--ultramarine) 0%, #2d3b6b 100%);
+  border-radius: var(--r-card); padding: 20px; color: var(--white); margin-bottom: 20px;
+}
+.upcoming-banner .ub-label { font-size: 11px; font-family: var(--font-mono); color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.upcoming-banner .ub-name { font-family: var(--font-display); font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+.upcoming-banner .ub-meta { font-size: 13px; color: rgba(255,255,255,0.75); }
+
+/* ─── STAT CARDS ── */
+.stat-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.stat-card { background: var(--white); border-radius: 10px; border: 1px solid var(--light-grey); padding: 14px; text-align: center; }
+.stat-value { font-family: var(--font-display); font-size: 28px; font-weight: 700; color: var(--black); line-height: 1; }
+.stat-label { font-size: 11px; color: var(--mid-grey); margin-top: 4px; font-family: var(--font-mono); }
+
+/* ─── LOADING ── */
+.loading { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; gap: 16px; }
+.loader-mark { font-family: var(--font-display); font-size: 52px; font-weight: 700; color: var(--saffron); animation: pulse 1.5s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(0.97)} }
+
+/* ─── MISC ── */
+.flex { display: flex; }
+.flex-center { display: flex; align-items: center; }
+.flex-between { display: flex; align-items: center; justify-content: space-between; }
+.gap-8 { gap: 8px; }
+.gap-12 { gap: 12px; }
+.mt-8 { margin-top: 8px; }
+.mt-16 { margin-top: 16px; }
+.mt-24 { margin-top: 24px; }
+.mb-8 { margin-bottom: 8px; }
+.mb-16 { margin-bottom: 16px; }
+.text-sm { font-size: 13px; }
+.text-xs { font-size: 11px; font-family: var(--font-mono); color: var(--mid-grey); }
+.text-mid { color: var(--mid-grey); }
+.font-mono { font-family: var(--font-mono); }
+.w-full { width: 100%; }
+
+/* ─── ASSIGN MODAL ── */
+.assign-instructor-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--pearl); }
+.assign-instructor-row:last-child { border-bottom: none; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--light-grey); border-radius: 4px; }
+
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ROLE BAR -->
+  <div id="role-bar">
+    <span class="role-bar-label">SnowOS v0</span>
+    <div class="role-tabs">
+      <button class="role-tab" data-role="instructor" onclick="switchRole('instructor')">👨‍🏫 Instructor</button>
+      <button class="role-tab" data-role="supervisor" onclick="switchRole('supervisor')">🎯 Supervisor</button>
+      <button class="role-tab" data-role="guest" onclick="switchRole('guest')">👤 Guest</button>
+    </div>
+    <div class="role-bar-spacer"></div>
+    <div class="role-bar-right">
+      <span class="role-identity" id="role-identity-label"></span>
+      <button class="btn-reset" onclick="resetData()">↺ Reset</button>
+    </div>
+  </div>
+
+  <!-- MAIN HEADER -->
+  <div id="main-header">
+    <span class="header-brand">Ψ SnowOS</span>
+    <span class="header-title" id="header-title">Ski School Management</span>
+    <div class="header-right">
+      <span class="header-date" id="header-date"></span>
+    </div>
+  </div>
+
+  <!-- PAGE BODY -->
+  <div id="page-body">
+
+    <!-- ═══ INSTRUCTOR VIEW ═══ -->
+    <div class="view" id="view-instructor">
+      <!-- Schedule sub-view -->
+      <div id="instr-schedule" class="scroll-view">
+        <div class="section-heading">Today's Schedule</div>
+        <div id="instr-date-nav"></div>
+        <div id="instr-lesson-list"></div>
+      </div>
+      <!-- Lesson Detail sub-view -->
+      <div id="instr-lesson-detail" style="display:none; position:fixed; inset:0; top:100px; background:var(--light-sand); z-index:50; overflow:hidden;">
+        <div class="detail-header" id="instr-detail-header"></div>
+        <div class="detail-scroll" id="instr-detail-body"></div>
+        <div class="action-bar" id="instr-detail-actions"></div>
+      </div>
+      <!-- Guest Profile sub-view -->
+      <div id="instr-guest-profile" style="display:none; position:fixed; inset:0; top:100px; background:var(--light-sand); z-index:60; overflow:hidden;">
+        <div class="detail-header" id="instr-gp-header"></div>
+        <div class="detail-scroll" id="instr-gp-body"></div>
+      </div>
+      <!-- Report sub-view -->
+      <div id="instr-report-view" style="display:none; position:fixed; inset:0; top:100px; background:var(--light-sand); z-index:55; overflow:hidden;">
+        <div class="detail-header" id="instr-report-header"></div>
+        <div class="detail-scroll" id="instr-report-body"></div>
+        <div class="action-bar" id="instr-report-actions"></div>
+      </div>
+    </div>
+
+    <!-- ═══ SUPERVISOR VIEW ═══ -->
+    <div class="view" id="view-supervisor">
+      <div class="scroll-view">
+        <div class="section-heading">Operations Dashboard <small id="sup-date-label"></small></div>
+
+        <!-- Stats -->
+        <div class="stat-row" id="sup-stats"></div>
+
+        <!-- Tabs -->
+        <div class="tab-bar">
+          <button class="tab-btn active" id="sup-tab-lessons" onclick="supTabSwitch('lessons')">All Lessons</button>
+          <button class="tab-btn" id="sup-tab-instructors" onclick="supTabSwitch('instructors')">Instructor Pool</button>
+        </div>
+
+        <!-- Lessons panel -->
+        <div id="sup-lessons-panel"></div>
+
+        <!-- Instructors panel -->
+        <div id="sup-instructors-panel" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- ═══ GUEST VIEW ═══ -->
+    <div class="view" id="view-guest">
+      <!-- Guest Dashboard -->
+      <div id="guest-dashboard" class="scroll-view">
+        <div id="guest-welcome-banner"></div>
+        <div class="stat-row" id="guest-stats"></div>
+
+        <div class="tab-bar">
+          <button class="tab-btn active" id="guest-tab-upcoming" onclick="guestTabSwitch('upcoming')">Upcoming</button>
+          <button class="tab-btn" id="guest-tab-book" onclick="guestTabSwitch('book')">Browse & Book</button>
+          <button class="tab-btn" id="guest-tab-history" onclick="guestTabSwitch('history')">History</button>
+          <button class="tab-btn" id="guest-tab-profile" onclick="guestTabSwitch('profile')">Profile</button>
+        </div>
+
+        <div id="guest-upcoming-panel"></div>
+        <div id="guest-book-panel" style="display:none;"></div>
+        <div id="guest-history-panel" style="display:none;"></div>
+        <div id="guest-profile-panel" style="display:none;"></div>
+      </div>
+    </div>
+
+  </div><!-- /page-body -->
+</div><!-- /app -->
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal-content"></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════════
+const $ = id => document.getElementById(id);
+const qs = (sel, ctx = document) => ctx.querySelector(sel);
+const now = () => new Date();
+function uuid() {
+  return 'xxxx-xxxx-4xxx-yxxx'.replace(/[xy]/g, c => {
+    const r = Math.random()*16|0;
+    return (c==='x'?r:(r&0x3|0x8)).toString(16);
+  });
+}
+function fmt(date) {
+  return new Date(date).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+}
+function fmtTime(str) {
+  // "9:00 AM" → return as-is; ISO timestamp → format
+  if (!str) return '';
+  if (str.includes('T')) {
+    return new Date(str).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true});
+  }
+  return str;
+}
+function dateStr(d) { // YYYY-MM-DD
+  const dt = d || new Date();
+  return dt.toISOString().split('T')[0];
+}
+function addDays(d, n) {
+  const r = new Date(d); r.setDate(r.getDate() + n); return r;
+}
+function initials(name) {
+  return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+}
+function avatarColor(name) {
+  const colors = ['#1E2643','#9D432C','#00807D','#1565c0','#880e4f','#2e7d32','#4a1486','#0277bd'];
+  let h = 0; for (let i=0;i<name.length;i++) h = ((h<<5)-h)+name.charCodeAt(i);
+  return colors[Math.abs(h) % colors.length];
+}
+
+// toast
+function showToast(msg, dur=2500) {
+  const t = $('toast'); t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), dur);
+}
+
+// modal
+function openModal(html) {
+  $('modal-content').innerHTML = html;
+  $('modal-overlay').classList.add('open');
+}
+function closeModal(e) {
+  if (!e || e.target === $('modal-overlay')) {
+    $('modal-overlay').classList.remove('open');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// SEED DATA
+// ═══════════════════════════════════════════════════════
+function generateSeedData() {
+  const TODAY = new Date();
+  TODAY.setHours(0,0,0,0);
+
+  const resort = { id: 'resort-1', name: 'Club Med Tomamu', country: 'Japan' };
+
+  const disciplines = [
+    { id: 'disc-1', name: 'Ski' },
+    { id: 'disc-2', name: 'Snowboard' }
+  ];
+
+  const instructors = [
+    { id: 'inst-1', name: 'Sammy Chen',     discipline_id: 'disc-1', max_level: 7, status: 'assigned' },
+    { id: 'inst-2', name: 'Lena Moreau',    discipline_id: 'disc-1', max_level: 6, status: 'assigned' },
+    { id: 'inst-3', name: 'Marco Rossi',    discipline_id: 'disc-1', max_level: 5, status: 'standby' },
+    { id: 'inst-4', name: 'Yuki Tanaka',    discipline_id: 'disc-2', max_level: 5, status: 'assigned' },
+    { id: 'inst-5', name: 'Jake Winters',   discipline_id: 'disc-2', max_level: 4, status: 'standby' },
+    { id: 'inst-6', name: 'Sophie Durant',  discipline_id: 'disc-1', max_level: 7, status: 'assigned' },
+    { id: 'inst-7', name: 'Tom Bradley',    discipline_id: 'disc-1', max_level: 4, status: 'training' },
+    { id: 'inst-8', name: 'Aiko Nakamura',  discipline_id: 'disc-2', max_level: 6, status: 'assigned' },
+    { id: 'inst-9', name: 'Pierre Blanc',   discipline_id: 'disc-1', max_level: 5, status: 'standby' },
+    { id: 'inst-10', name: 'Sara Lindqvist',discipline_id: 'disc-1', max_level: 6, status: 'assigned' },
+  ];
+
+  const templates = [
+    { id: 'tpl-1',  name: 'CLUB 6',      lesson_type: 'Adult', discipline_id: 'disc-1', level_numeric: 7, start_time: '9:00 AM',  end_time: '11:30 AM', location: 'Adult Departure', max_capacity: 8 },
+    { id: 'tpl-2',  name: 'CLUB 5',      lesson_type: 'Adult', discipline_id: 'disc-1', level_numeric: 6, start_time: '9:00 AM',  end_time: '11:30 AM', location: 'Adult Departure', max_capacity: 8 },
+    { id: 'tpl-3',  name: 'CLUB 4',      lesson_type: 'Adult', discipline_id: 'disc-1', level_numeric: 5, start_time: '9:15 AM',  end_time: '11:30 AM', location: 'Adult Departure', max_capacity: 8 },
+    { id: 'tpl-4',  name: 'CLUB 3',      lesson_type: 'Adult', discipline_id: 'disc-1', level_numeric: 4, start_time: '9:30 AM',  end_time: '11:45 AM', location: 'Adult Departure', max_capacity: 8 },
+    { id: 'tpl-5',  name: 'CLUB 2',      lesson_type: 'Adult', discipline_id: 'disc-1', level_numeric: 3, start_time: '9:45 AM',  end_time: '11:45 AM', location: 'Adult Departure', max_capacity: 8 },
+    { id: 'tpl-6',  name: 'CLUB 1',      lesson_type: 'Adult', discipline_id: 'disc-1', level_numeric: 2, start_time: '10:00 AM', end_time: '12:00 PM', location: 'Adult Departure', max_capacity: 8 },
+    { id: 'tpl-7',  name: 'CLUB BEG',    lesson_type: 'Adult', discipline_id: 'disc-1', level_numeric: 1, start_time: '10:15 AM', end_time: '12:15 PM', location: 'Adult Departure', max_capacity: 8 },
+    { id: 'tpl-8',  name: 'SB 4',        lesson_type: 'Adult', discipline_id: 'disc-2', level_numeric: 5, start_time: '9:45 AM',  end_time: '12:00 PM', location: 'Adult Departure', max_capacity: 8 },
+    { id: 'tpl-9',  name: 'SB 3',        lesson_type: 'Adult', discipline_id: 'disc-2', level_numeric: 4, start_time: '9:45 AM',  end_time: '12:00 PM', location: 'Adult Departure', max_capacity: 8 },
+    { id: 'tpl-10', name: 'SB 2',        lesson_type: 'Adult', discipline_id: 'disc-2', level_numeric: 3, start_time: '10:00 AM', end_time: '12:00 PM', location: 'Adult Departure', max_capacity: 8 },
+    { id: 'tpl-11', name: 'SB 1',        lesson_type: 'Adult', discipline_id: 'disc-2', level_numeric: 2, start_time: '10:15 AM', end_time: '12:15 PM', location: 'Adult Departure', max_capacity: 8 },
+    { id: 'tpl-12', name: 'SB BEG',      lesson_type: 'Adult', discipline_id: 'disc-2', level_numeric: 1, start_time: '10:15 AM', end_time: '12:15 PM', location: 'Adult Departure', max_capacity: 8 },
+    { id: 'tpl-13', name: 'TRIDENT GOLD',lesson_type: 'Kids',  discipline_id: 'disc-1', level_numeric: 7, start_time: '9:00 AM',  end_time: '11:15 AM', location: 'Mini Club', max_capacity: 8 },
+    { id: 'tpl-14', name: 'TRIDENT BRONZE',lesson_type:'Kids', discipline_id: 'disc-1', level_numeric: 6, start_time: '9:00 AM',  end_time: '11:15 AM', location: 'Mini Club', max_capacity: 8 },
+    { id: 'tpl-15', name: 'TRIDENT 3',   lesson_type: 'Kids',  discipline_id: 'disc-1', level_numeric: 5, start_time: '9:00 AM',  end_time: '11:15 AM', location: 'Mini Club', max_capacity: 8 },
+    { id: 'tpl-16', name: 'TRIDENT 2',   lesson_type: 'Kids',  discipline_id: 'disc-1', level_numeric: 4, start_time: '9:15 AM',  end_time: '11:30 AM', location: 'Mini Club', max_capacity: 8 },
+    { id: 'tpl-17', name: 'TRIDENT 1',   lesson_type: 'Kids',  discipline_id: 'disc-1', level_numeric: 3, start_time: '9:30 AM',  end_time: '11:30 AM', location: 'Mini Club', max_capacity: 8 },
+    { id: 'tpl-18', name: 'DRAGON',      lesson_type: 'Kids',  discipline_id: 'disc-1', level_numeric: 2, start_time: '9:30 AM',  end_time: '11:30 AM', location: 'Mini Club', max_capacity: 8 },
+    { id: 'tpl-19', name: 'TIGER',       lesson_type: 'Kids',  discipline_id: 'disc-1', level_numeric: 1, start_time: '9:45 AM',  end_time: '11:45 AM', location: 'Mini Club', max_capacity: 8 },
+    { id: 'tpl-20', name: 'PANDA',       lesson_type: 'Kids',  discipline_id: 'disc-1', level_numeric: 1, start_time: '10:00 AM', end_time: '11:30 AM', location: 'Mini Club', max_capacity: 8 },
+    { id: 'tpl-21', name: 'RIDER 3',     lesson_type: 'Kids',  discipline_id: 'disc-2', level_numeric: 4, start_time: '9:00 AM',  end_time: '11:15 AM', location: 'Mini Club', max_capacity: 8 },
+    { id: 'tpl-22', name: 'RIDER 2',     lesson_type: 'Kids',  discipline_id: 'disc-2', level_numeric: 3, start_time: '9:00 AM',  end_time: '11:15 AM', location: 'Mini Club', max_capacity: 8 },
+    { id: 'tpl-23', name: 'RIDER 1',     lesson_type: 'Kids',  discipline_id: 'disc-2', level_numeric: 2, start_time: '9:00 AM',  end_time: '11:00 AM', location: 'Mini Club', max_capacity: 8 },
+    { id: 'tpl-24', name: 'RIDER',       lesson_type: 'Kids',  discipline_id: 'disc-2', level_numeric: 1, start_time: '9:00 AM',  end_time: '11:00 AM', location: 'Mini Club', max_capacity: 8 },
+    { id: 'tpl-25', name: 'PRIVATE SKI', lesson_type: 'Private', discipline_id: 'disc-1', level_numeric: null, start_time: null, end_time: null, location: 'Locker #', max_capacity: null },
+  ];
+
+  // Generate 50 guests
+  const guestFirstNames = ['Anna','Luca','Sophie','Tom','Yuki','Marie','James','Elena','Carlos','Mei',
+    'Paul','Laura','Kenji','Lisa','Ahmed','Nadia','Oliver','Chloe','Ryu','Emma',
+    'Felix','Hana','David','Iris','Finn','Zoe','Hugo','Mia','Leo','Ava',
+    'Max','Lily','Kai','Sara','Ben','Nina','Alex','Rita','Sam','Yuna',
+    'Eric','Amy','Lucas','Grace','Noah','Clara','Jake','Eva','Ryan','Julia'];
+  const guestLastNames = ['Smith','Johnson','Chen','Müller','Tanaka','Dubois','Wilson','Rossi','Park','Andersen',
+    'Garcia','Sato','Martin','Kim','Taylor','Brown','Nakamura','Davis','Lopez','White'];
+
+  const guests = guestFirstNames.map((fn,i) => ({
+    id: `guest-${i+1}`,
+    name: `${fn} ${guestLastNames[i%20]}`,
+    age: 18 + Math.floor(Math.random()*42),
+    ability_level: Math.ceil(Math.random()*7),
+    stay_start: dateStr(addDays(TODAY, -7 + Math.floor(Math.random()*5))),
+    stay_end: dateStr(addDays(TODAY, 1 + Math.floor(Math.random()*6))),
+    nationality: ['FR','JP','US','DE','GB','CA','AU','CH'][i%8]
+  }));
+  // Anna is guest-1
+  guests[0].name = 'Anna Smith';
+
+  // Generate lessons: 4 per day for 14 days, using a rotation of templates
+  const coreTpls = ['tpl-1','tpl-2','tpl-3','tpl-4','tpl-5','tpl-13','tpl-14','tpl-15','tpl-8','tpl-9'];
+  const lessons = [];
+  for (let d = -10; d <= 4; d++) {
+    const day = addDays(TODAY, d);
+    const pick = coreTpls.slice((d+10)%8, (d+10)%8+7);
+    const tplsForDay = pick.length < 4 ? [...pick, ...coreTpls.slice(0,4-pick.length)] : pick.slice(0,7);
+    tplsForDay.forEach((tplId,i) => {
+      const tpl = templates.find(t=>t.id===tplId);
+      if (!tpl) return;
+      let status = 'scheduled';
+      if (d < 0) status = Math.random() > 0.3 ? 'reported' : 'completed';
+      else if (d === 0) {
+        if (i===0) status = 'reported';
+        else if (i===1) status = 'completed';
+        else if (i===2) status = 'in_progress';
+        else status = 'scheduled';
+      }
+      lessons.push({
+        id: `lesson-${uuid()}`,
+        resort_id: 'resort-1',
+        lesson_template_id: tplId,
+        date: dateStr(day),
+        start_time: tpl.start_time,
+        end_time: tpl.end_time,
+        status,
+        created_by: 'inst-6',
+        created_at: new Date().toISOString()
+      });
+    });
+  }
+
+  // Instructor assignments
+  const assignments = [];
+  const instrPool = ['inst-1','inst-2','inst-3','inst-6','inst-10','inst-4','inst-8'];
+  lessons.forEach((lesson,idx) => {
+    const tpl = templates.find(t=>t.id===lesson.lesson_template_id);
+    const lead = instrPool[idx % instrPool.length];
+    assignments.push({ id:`asgn-${uuid()}`, lesson_id: lesson.id, instructor_id: lead, role: 'lead', assigned_at: new Date().toISOString() });
+    if (tpl && tpl.lesson_type !== 'Private' && Math.random() > 0.5) {
+      const asst = instrPool[(idx+2) % instrPool.length];
+      if (asst !== lead) {
+        assignments.push({ id:`asgn-${uuid()}`, lesson_id: lesson.id, instructor_id: asst, role: 'assistant', assigned_at: new Date().toISOString() });
+      }
+    }
+  });
+
+  // Bookings: 3–6 guests per lesson
+  const bookings = [];
+  lessons.forEach((lesson, li) => {
+    const n = 3 + Math.floor(Math.random()*4);
+    const shuffled = [...guests].sort(()=>Math.random()-0.5).slice(0,n);
+    shuffled.forEach(g => {
+      bookings.push({ id:`bk-${uuid()}`, lesson_id: lesson.id, guest_id: g.id, booking_status: 'active', created_at: new Date().toISOString() });
+    });
+  });
+
+  // Lesson reports for completed/reported lessons
+  const reports = [];
+  const reportEntries = [];
+  const skillSets = [
+    ['Parallel turns','Edge control'],['Carving','Short turns'],['Moguls','Speed control'],
+    ['Powder technique','Balance'],['Slalom basics','Rhythm'],['Off-piste intro','Safety']
+  ];
+  const terrains = ['Green runs (Sakura, Maple)','Blue runs (Alpine, Summit)','Red runs (Expert, Couloir)','Mixed terrain'];
+
+  lessons.filter(l=>l.status==='reported').forEach((lesson,ri) => {
+    const rid = `rep-${uuid()}`;
+    const asgn = assignments.find(a=>a.lesson_id===lesson.id&&a.role==='lead');
+    reports.push({
+      id: rid, lesson_id: lesson.id,
+      submitted_by: asgn ? asgn.instructor_id : 'inst-1',
+      terrain: terrains[ri%4],
+      skills: skillSets[ri%6],
+      summary: 'Good session overall. Group made solid progress.',
+      created_at: new Date().toISOString()
+    });
+    const lessonBookings = bookings.filter(b=>b.lesson_id===lesson.id&&b.booking_status==='active');
+    lessonBookings.forEach(bk => {
+      const guest = guests.find(g=>g.id===bk.guest_id);
+      const recLevel = Math.min(7, (guest.ability_level||1) + (Math.random()>0.6?1:0));
+      reportEntries.push({
+        id: `re-${uuid()}`, report_id: rid, guest_id: bk.guest_id,
+        recommended_level: recLevel,
+        progress_notes: [
+          'Showed great improvement with edge control today.',
+          'Needs more practice on upper body rotation.',
+          'Ready to progress to the next level.',
+          'Good parallel turns but struggles on steeper terrain.',
+          'Excellent attitude — very coachable.',
+          'Making steady progress, keep practicing turns.',
+        ][Math.floor(Math.random()*6)],
+        created_at: new Date().toISOString()
+      });
+    });
+  });
+
+  return { resort, disciplines, instructors, templates, lessons, guests, bookings, assignments, reports, reportEntries };
+}
+
+// ═══════════════════════════════════════════════════════
+// STORE (localStorage layer)
+// ═══════════════════════════════════════════════════════
+const Store = {
+  KEY: 'snowos_v0',
+  data: null,
+
+  init() {
+    const raw = localStorage.getItem(this.KEY);
+    if (raw) {
+      try { this.data = JSON.parse(raw); return; } catch(e) {}
+    }
+    this.data = generateSeedData();
+    this.save();
+  },
+
+  save() { localStorage.setItem(this.KEY, JSON.stringify(this.data)); },
+
+  reset() {
+    localStorage.removeItem(this.KEY);
+    this.data = generateSeedData();
+    this.save();
+    showToast('Data reset to seed ✓');
+    renderCurrentView();
+  },
+
+  // Lessons
+  getLessons(filters={}) {
+    let ls = this.data.lessons;
+    if (filters.date) ls = ls.filter(l=>l.date===filters.date);
+    if (filters.instructor_id) {
+      const asgns = this.data.assignments.filter(a=>a.instructor_id===filters.instructor_id);
+      const ids = new Set(asgns.map(a=>a.lesson_id));
+      ls = ls.filter(l=>ids.has(l.id));
+    }
+    if (filters.status) ls = ls.filter(l=>l.status===filters.status);
+    return ls;
+  },
+
+  getLessonById(id) { return this.data.lessons.find(l=>l.id===id); },
+
+  updateLessonStatus(lessonId, status) {
+    const lesson = this.data.lessons.find(l=>l.id===lessonId);
+    if (lesson) { lesson.status = status; this.save(); }
+  },
+
+  getTemplate(id) { return this.data.templates.find(t=>t.id===id); },
+  getDiscipline(id) { return this.data.disciplines.find(d=>d.id===id); },
+
+  // Bookings
+  getBookings(lessonId) {
+    return this.data.bookings.filter(b=>b.lesson_id===lessonId&&b.booking_status==='active');
+  },
+  getGuestBookings(guestId) {
+    return this.data.bookings.filter(b=>b.guest_id===guestId&&b.booking_status==='active');
+  },
+  addBooking(lessonId, guestId) {
+    const existing = this.data.bookings.find(b=>b.lesson_id===lessonId&&b.guest_id===guestId&&b.booking_status==='active');
+    if (existing) return false;
+    this.data.bookings.push({ id:`bk-${uuid()}`, lesson_id:lessonId, guest_id:guestId, booking_status:'active', created_at:new Date().toISOString() });
+    this.save(); return true;
+  },
+
+  // Guests
+  getGuests(ids) {
+    if (ids) return this.data.guests.filter(g=>ids.includes(g.id));
+    return this.data.guests;
+  },
+  getGuestById(id) { return this.data.guests.find(g=>g.id===id); },
+
+  // Assignments
+  getAssignments(lessonId) {
+    return this.data.assignments.filter(a=>a.lesson_id===lessonId);
+  },
+  getInstructorAssignments(instructorId) {
+    return this.data.assignments.filter(a=>a.instructor_id===instructorId);
+  },
+  addAssignment(lessonId, instructorId, role='assistant') {
+    const existing = this.data.assignments.find(a=>a.lesson_id===lessonId&&a.instructor_id===instructorId);
+    if (existing) return false;
+    this.data.assignments.push({ id:`asgn-${uuid()}`, lesson_id:lessonId, instructor_id:instructorId, role, assigned_at:new Date().toISOString() });
+    this.save(); return true;
+  },
+  removeAssignment(lessonId, instructorId) {
+    this.data.assignments = this.data.assignments.filter(a=>!(a.lesson_id===lessonId&&a.instructor_id===instructorId));
+    this.save();
+  },
+
+  // Instructors
+  getInstructors() { return this.data.instructors; },
+  getInstructorById(id) { return this.data.instructors.find(i=>i.id===id); },
+
+  // Reports
+  getReport(lessonId) { return this.data.reports.find(r=>r.lesson_id===lessonId); },
+  getReportEntries(reportId) { return this.data.reportEntries.filter(e=>e.report_id===reportId); },
+  getGuestReportEntries(guestId) {
+    const entries = this.data.reportEntries.filter(e=>e.guest_id===guestId);
+    return entries.map(e => {
+      const report = this.data.reports.find(r=>r.id===e.report_id);
+      const lesson = report ? this.data.lessons.find(l=>l.id===report.lesson_id) : null;
+      const tpl = lesson ? this.getTemplate(lesson.lesson_template_id) : null;
+      const instructor = report ? this.getInstructorById(report.submitted_by) : null;
+      return { ...e, report, lesson, tpl, instructor };
+    }).filter(e=>e.report).sort((a,b)=>new Date(b.lesson?.date)-new Date(a.lesson?.date));
+  },
+  saveReport(lessonId, data) {
+    let report = this.data.reports.find(r=>r.lesson_id===lessonId);
+    if (!report) {
+      report = { id:`rep-${uuid()}`, lesson_id:lessonId, submitted_by:data.submitted_by, created_at:new Date().toISOString() };
+      this.data.reports.push(report);
+    }
+    report.terrain = data.terrain;
+    report.skills = data.skills;
+    report.summary = data.summary;
+    // Upsert entries
+    data.entries.forEach(entry => {
+      let existing = this.data.reportEntries.find(e=>e.report_id===report.id&&e.guest_id===entry.guest_id);
+      if (existing) {
+        existing.recommended_level = entry.recommended_level;
+        existing.progress_notes = entry.progress_notes;
+      } else {
+        this.data.reportEntries.push({ id:`re-${uuid()}`, report_id:report.id, guest_id:entry.guest_id, recommended_level:entry.recommended_level, progress_notes:entry.progress_notes, created_at:new Date().toISOString() });
+      }
+    });
+    this.save();
+    return report;
+  },
+
+  // Draft reports
+  saveDraft(lessonId, data) { localStorage.setItem(`draft_${lessonId}`, JSON.stringify(data)); },
+  getDraft(lessonId) { try { return JSON.parse(localStorage.getItem(`draft_${lessonId}`)); } catch(e) { return null; } },
+  clearDraft(lessonId) { localStorage.removeItem(`draft_${lessonId}`); }
+};
+
+// ═══════════════════════════════════════════════════════
+// APP STATE
+// ═══════════════════════════════════════════════════════
+const App = {
+  role: 'instructor',
+  instructorId: 'inst-1',
+  guestId: 'guest-1',
+  supervisorId: 'inst-6',
+  instrSelectedDate: dateStr(new Date()),
+  instrSelectedLessonId: null,
+  instrSelectedGuestId: null,
+  instrReportLessonId: null,
+  instrSelectedGuests: new Set(), // for group lesson checkbox
+  supTab: 'lessons',
+  guestTab: 'upcoming',
+  reportDraftData: {},
+};
+
+function loadState() {
+  const raw = localStorage.getItem('snowos_app_state');
+  if (raw) {
+    try {
+      const saved = JSON.parse(raw);
+      App.role = saved.role || 'instructor';
+      App.instructorId = saved.instructorId || 'inst-1';
+      App.guestId = saved.guestId || 'guest-1';
+    } catch(e) {}
+  }
+}
+function saveAppState() {
+  localStorage.setItem('snowos_app_state', JSON.stringify({ role: App.role, instructorId: App.instructorId, guestId: App.guestId }));
+}
+
+// ═══════════════════════════════════════════════════════
+// ROLE SWITCHING
+// ═══════════════════════════════════════════════════════
+function switchRole(role) {
+  App.role = role; saveAppState();
+  document.querySelectorAll('.role-tab').forEach(t => t.classList.toggle('active', t.dataset.role===role));
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  $(`view-${role}`).classList.add('active');
+
+  // Reset sub-views
+  if (role==='instructor') {
+    App.instrSelectedLessonId = null;
+    App.instrSelectedGuestId = null;
+    showInstrSchedule();
+  }
+
+  // Update header
+  const titles = { instructor: "Instructor View", supervisor: "Operations", guest: "Guest Portal" };
+  $('header-title').textContent = titles[role];
+
+  const identity = { instructor: Store.getInstructorById(App.instructorId)?.name || 'Sammy', supervisor: 'Jason (Supervisor)', guest: Store.getGuestById(App.guestId)?.name || 'Anna' };
+  $('role-identity-label').textContent = identity[role];
+
+  renderCurrentView();
+}
+
+function renderCurrentView() {
+  if (App.role==='instructor') renderInstructor();
+  else if (App.role==='supervisor') renderSupervisor();
+  else renderGuest();
+}
+
+// ═══════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════
+function statusBadge(status) {
+  const labels = { scheduled:'Scheduled', in_progress:'In Progress', completed:'Completed', reported:'Reported' };
+  return `<span class="badge badge-${status} badge-dot">${labels[status]||status}</span>`;
+}
+function disciplineLabel(discId) {
+  if (discId==='disc-1') return `<span class="badge badge-ski">⛷ Ski</span>`;
+  return `<span class="badge badge-sb">🏂 Snowboard</span>`;
+}
+function levelLabel(n) {
+  if (!n) return '';
+  const labels = {1:'Beginner',2:'Level 1',3:'Level 2',4:'Level 3',5:'Level 4',6:'Level 5',7:'Expert'};
+  return `<span class="pill pill-level">Lv.${n} · ${labels[n]||''}</span>`;
+}
+function typeLabel(t) {
+  if (t==='Kids') return `<span class="badge badge-kids">👶 Kids</span>`;
+  if (t==='Private') return `<span class="badge badge-private">⭐ Private</span>`;
+  return `<span class="badge badge-adult">👥 Adult</span>`;
+}
+
+function buildAvatar(name, size='md') {
+  const bg = avatarColor(name);
+  return `<div class="avatar avatar-${size}" style="background:${bg}">${initials(name)}</div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// INSTRUCTOR VIEW
+// ═══════════════════════════════════════════════════════
+function renderInstructor() {
+  renderInstrSchedule();
+}
+
+function showInstrSchedule() {
+  $('instr-schedule').style.display = 'block';
+  $('instr-lesson-detail').style.display = 'none';
+  $('instr-guest-profile').style.display = 'none';
+  $('instr-report-view').style.display = 'none';
+}
+
+function renderInstrSchedule() {
+  showInstrSchedule();
+  const lessons = Store.getLessons({ date: App.instrSelectedDate, instructor_id: App.instructorId });
+  const d = new Date(App.instrSelectedDate + 'T12:00:00');
+  const todayStr = dateStr(new Date());
+  const isToday = App.instrSelectedDate === todayStr;
+
+  // Date nav
+  $('instr-date-nav').innerHTML = `
+    <div class="date-nav">
+      <button class="date-nav-btn" onclick="instrChangeDate(-1)">‹</button>
+      <span class="date-nav-text">${d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}</span>
+      <button class="date-nav-btn" onclick="instrChangeDate(1)">›</button>
+      ${isToday?'':'<button class="date-nav-today" onclick="instrGoToday()">Today</button>'}
+    </div>`;
+
+  if (!lessons.length) {
+    $('instr-lesson-list').innerHTML = `<div class="empty-state"><span class="empty-state-icon">🏔</span><div class="empty-state-title">No lessons on this day</div><div class="empty-state-text">Enjoy the mountain!</div></div>`;
+    return;
+  }
+
+  const sorted = [...lessons].sort((a,b) => {
+    const toMins = t => { if(!t)return 999; const [h,m] = t.split(' ')[0].split(':'); const pm = t.includes('PM')&&+h!==12; return +h*60+pm*720+(+m||0); };
+    return toMins(a.start_time) - toMins(b.start_time);
+  });
+
+  $('instr-lesson-list').innerHTML = sorted.map(lesson => {
+    const tpl = Store.getTemplate(lesson.lesson_template_id);
+    if (!tpl) return '';
+    const bookings = Store.getBookings(lesson.id);
+    const asgns = Store.getAssignments(lesson.id);
+    const coInstructors = asgns.filter(a=>a.instructor_id!==App.instructorId);
+    const disc = Store.getDiscipline(tpl.discipline_id);
+    return `
+    <div class="lesson-card ${lesson.status==='in_progress'?'in-progress':lesson.status==='completed'?'completed':lesson.status==='reported'?'reported':'active-lesson'}" onclick="openLessonDetail('${lesson.id}')">
+      <div class="lc-time">
+        <div class="lc-time-main">${lesson.start_time||'TBD'}</div>
+        <div class="lc-time-end">${lesson.end_time||''}</div>
+      </div>
+      <div class="lc-body">
+        <div class="lc-name">${tpl.name}</div>
+        <div class="lc-meta">
+          ${typeLabel(tpl.lesson_type)}
+          ${disciplineLabel(tpl.discipline_id)}
+          ${tpl.level_numeric ? levelLabel(tpl.level_numeric) : ''}
+        </div>
+        <div class="lc-meta mt-8">
+          <span class="pill pill-guests">👤 ${bookings.length} guests</span>
+          <span class="pill pill-loc">📍 ${tpl.location}</span>
+          ${coInstructors.length ? `<span class="pill pill-instructors">+${coInstructors.length} co-instructor${coInstructors.length>1?'s':''}</span>` : ''}
+        </div>
+      </div>
+      <div class="lc-right">${statusBadge(lesson.status)}</div>
+    </div>`;
+  }).join('');
+}
+
+function instrChangeDate(n) {
+  App.instrSelectedDate = dateStr(addDays(new Date(App.instrSelectedDate+'T12:00:00'), n));
+  renderInstrSchedule();
+}
+function instrGoToday() {
+  App.instrSelectedDate = dateStr(new Date());
+  renderInstrSchedule();
+}
+
+// ─── LESSON DETAIL ──────────────────────────────────────
+function openLessonDetail(lessonId) {
+  App.instrSelectedLessonId = lessonId;
+  App.instrSelectedGuests = new Set();
+  const lesson = Store.getLessonById(lessonId);
+  const tpl = Store.getTemplate(lesson.lesson_template_id);
+  const bookings = Store.getBookings(lessonId);
+  const guests = Store.getGuests(bookings.map(b=>b.guest_id));
+  const asgns = Store.getAssignments(lessonId);
+  const isMultiInstructor = asgns.length > 1;
+
+  $('instr-schedule').style.display = 'none';
+  $('instr-lesson-detail').style.display = 'block';
+
+  // Header
+  $('instr-detail-header').innerHTML = `
+    <div class="detail-back" onclick="showInstrSchedule()">← Back to Schedule</div>
+    <div class="detail-header-title">${tpl.name}</div>
+    <div class="detail-header-sub">${tpl.lesson_type} · ${lesson.date ? new Date(lesson.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'}) : ''}</div>`;
+
+  // Info grid
+  const infoGrid = `<div class="info-grid">
+    <div class="info-cell"><div class="info-cell-label">Start</div><div class="info-cell-value">${lesson.start_time||'TBD'}</div></div>
+    <div class="info-cell"><div class="info-cell-label">End</div><div class="info-cell-value">${lesson.end_time||'TBD'}</div></div>
+    <div class="info-cell"><div class="info-cell-label">Location</div><div class="info-cell-value">${tpl.location}</div></div>
+    <div class="info-cell"><div class="info-cell-label">Status</div><div class="info-cell-value">${statusBadge(lesson.status)}</div></div>
+  </div>`;
+
+  // Discipline / level
+  const detailMeta = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+    ${disciplineLabel(tpl.discipline_id)}
+    ${typeLabel(tpl.lesson_type)}
+    ${tpl.level_numeric ? levelLabel(tpl.level_numeric) : ''}
+    ${statusBadge(lesson.status)}
+  </div>`;
+
+  // Co-instructors
+  const coInstrs = asgns.map(a => {
+    const inst = Store.getInstructorById(a.instructor_id);
+    return inst ? `<div class="flex-center gap-8 mb-8">${buildAvatar(inst.name,'sm')}<span class="text-sm" style="font-weight:600;">${inst.name}</span><span class="badge ${a.role==='lead'?'badge-in_progress':'badge-scheduled'}" style="font-size:10px;">${a.role}</span></div>` : '';
+  }).join('');
+
+  // Guest list
+  const isMulti = asgns.length > 1;
+  const guestList = guests.map(g => `
+    <div class="guest-row" style="position:relative;">
+      ${isMulti ? `<div class="check-box ${App.instrSelectedGuests.has(g.id)?'checked':''}" onclick="toggleGuestCheck('${g.id}',this)">${App.instrSelectedGuests.has(g.id)?'✓':''}</div>` : ''}
+      ${buildAvatar(g.name,'sm')}
+      <div class="guest-row-info" onclick="openGuestProfile('${g.id}')">
+        <div class="guest-row-name">${g.name}</div>
+        <div class="guest-row-meta">Age ${g.age} · ${levelLabel(g.ability_level)}</div>
+      </div>
+      <div class="guest-row-right">
+        <button class="btn btn-ghost btn-sm" onclick="openGuestProfile('${g.id}')">View →</button>
+      </div>
+    </div>`).join('');
+
+  // Lesson report section if reported
+  const reportSection = lesson.status === 'reported' ? (() => {
+    const report = Store.getReport(lessonId);
+    if (!report) return '';
+    return `<div class="card mt-16"><div style="padding:16px;"><div class="subsection-heading">Lesson Report</div>
+      <div class="text-sm"><strong>Terrain:</strong> ${report.terrain||'—'}</div>
+      <div class="text-sm mt-8"><strong>Skills:</strong> ${(report.skills||[]).join(', ')}</div>
+      <div class="text-sm mt-8">${report.summary||''}</div>
+    </div></div>`;
+  })() : '';
+
+  $('instr-detail-body').innerHTML = `
+    ${infoGrid}
+    <div class="subsection-heading">Instructors (${asgns.length})</div>
+    <div class="card mb-16"><div style="padding:12px 16px;">${coInstrs || '<div class="text-sm text-mid">No instructors assigned</div>'}</div></div>
+    <div class="subsection-heading">Guests (${guests.length})${isMulti?' — tap checkboxes to select your group':''}</div>
+    <div class="card">${guestList || '<div class="empty-state"><span>No guests booked</span></div>'}</div>
+    ${reportSection}`;
+
+  // Actions
+  renderLessonActions(lesson);
+}
+
+function toggleGuestCheck(guestId, el) {
+  if (App.instrSelectedGuests.has(guestId)) {
+    App.instrSelectedGuests.delete(guestId);
+    el.classList.remove('checked'); el.textContent = '';
+  } else {
+    App.instrSelectedGuests.add(guestId);
+    el.classList.add('checked'); el.textContent = '✓';
+  }
+}
+
+function renderLessonActions(lesson) {
+  const s = lesson.status;
+  let html = '';
+  if (s==='scheduled') {
+    html = `<button class="btn btn-green btn-full" onclick="startLesson('${lesson.id}')">▶ Start Lesson</button>`;
+  } else if (s==='in_progress') {
+    html = `<button class="btn btn-dark btn-full" onclick="completeLesson('${lesson.id}')">✓ Complete Lesson</button>`;
+  } else if (s==='completed') {
+    html = `<button class="btn btn-primary btn-full" onclick="openReport('${lesson.id}')">📝 Submit Lesson Report</button>`;
+  } else if (s==='reported') {
+    html = `<button class="btn btn-outline btn-full" onclick="openReport('${lesson.id}')">👁 View Report</button>`;
+  }
+  $('instr-detail-actions').innerHTML = html;
+}
+
+function startLesson(lessonId) {
+  Store.updateLessonStatus(lessonId, 'in_progress');
+  showToast('Lesson started ▶');
+  openLessonDetail(lessonId);
+}
+function completeLesson(lessonId) {
+  Store.updateLessonStatus(lessonId, 'completed');
+  showToast('Lesson completed ✓');
+  openLessonDetail(lessonId);
+}
+
+// ─── GUEST PROFILE (from instructor) ────────────────────
+function openGuestProfile(guestId) {
+  App.instrSelectedGuestId = guestId;
+  const guest = Store.getGuestById(guestId);
+  if (!guest) return;
+  const entries = Store.getGuestReportEntries(guestId);
+  const latestLevel = entries.length ? entries[0].recommended_level : guest.ability_level;
+
+  $('instr-guest-profile').style.display = 'block';
+
+  $('instr-gp-header').innerHTML = `
+    <div class="detail-back" onclick="closeGuestProfile()">← Back to Lesson</div>
+    <div style="display:flex;align-items:center;gap:12px;margin-top:6px;">
+      ${buildAvatar(guest.name,'lg')}
+      <div>
+        <div class="detail-header-title">${guest.name}</div>
+        <div class="detail-header-sub">Age ${guest.age} · ${['','Beginner','Level 1','Level 2','Level 3','Level 4','Level 5','Expert'][latestLevel]||''}</div>
+      </div>
+    </div>`;
+
+  const historyHtml = entries.length ? entries.map(e => `
+    <div class="history-item">
+      <div class="history-item-header">
+        <div>
+          <div style="font-size:14px;font-weight:600;">${e.tpl?.name||'Lesson'}</div>
+          <div class="history-item-date">${e.lesson?.date ? new Date(e.lesson.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) : ''}</div>
+        </div>
+        <div>${levelLabel(e.recommended_level)}</div>
+      </div>
+      <div class="history-item-notes">${e.progress_notes}</div>
+      ${e.instructor ? `<div class="text-xs mt-8">Instructor: ${e.instructor.name}</div>` : ''}
+      ${e.report?.terrain ? `<div class="text-xs mt-8">Terrain: ${e.report.terrain}</div>` : ''}
+      ${e.report?.skills?.length ? `<div class="text-xs mt-8">Skills: ${e.report.skills.join(', ')}</div>` : ''}
+    </div>`) : `<div class="empty-state"><span class="empty-state-icon">📋</span><div class="empty-state-title">No lesson history yet</div></div>`;
+
+  $('instr-gp-body').innerHTML = `
+    <div class="info-grid">
+      <div class="info-cell"><div class="info-cell-label">Current Level</div><div class="info-cell-value">${levelLabel(latestLevel)}</div></div>
+      <div class="info-cell"><div class="info-cell-label">Lessons</div><div class="info-cell-value">${entries.length}</div></div>
+      <div class="info-cell"><div class="info-cell-label">Nationality</div><div class="info-cell-value">${guest.nationality||'—'}</div></div>
+      <div class="info-cell"><div class="info-cell-label">Stay</div><div class="info-cell-value" style="font-size:12px;">${guest.stay_end || '—'}</div></div>
+    </div>
+    <div class="subsection-heading">Lesson History (${entries.length})</div>
+    ${historyHtml}`;
+}
+function closeGuestProfile() {
+  $('instr-guest-profile').style.display = 'none';
+}
+
+// ─── LESSON REPORT ───────────────────────────────────────
+function openReport(lessonId) {
+  App.instrReportLessonId = lessonId;
+  const lesson = Store.getLessonById(lessonId);
+  const tpl = Store.getTemplate(lesson.lesson_template_id);
+  const bookings = Store.getBookings(lessonId);
+  const guests = Store.getGuests(bookings.map(b=>b.guest_id));
+  const isReadOnly = lesson.status === 'reported';
+
+  $('instr-schedule').style.display = 'none';
+  $('instr-lesson-detail').style.display = 'none';
+  $('instr-report-view').style.display = 'block';
+
+  $('instr-report-header').innerHTML = `
+    <div class="detail-back" onclick="closeReport()">← Back to Lesson</div>
+    <div class="detail-header-title">${isReadOnly?'Lesson Report':'Submit Report'}: ${tpl.name}</div>
+    <div class="detail-header-sub">${lesson.date ? new Date(lesson.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'}) : ''}</div>`;
+
+  // Load draft or existing report
+  const existingReport = Store.getReport(lessonId);
+  const draft = Store.getDraft(lessonId);
+  const base = draft || (existingReport ? { terrain: existingReport.terrain, skills: existingReport.skills||[], summary: existingReport.summary||'' } : { terrain:'', skills:[], summary:'' });
+
+  const skillOptions = ['Parallel turns','Edge control','Carving','Short turns','Moguls','Speed control','Powder technique','Balance','Slalom','Off-piste','Safety','Rhythm'];
+  const terrainOptions = ['Green runs (Sakura, Maple)','Blue runs (Alpine, Summit)','Red runs (Expert, Couloir)','Mixed terrain','Off-piste areas','Race course'];
+
+  const guestFields = guests.map(g => {
+    const existingEntry = existingReport ? Store.getReportEntries(existingReport.id).find(e=>e.guest_id===g.id) : null;
+    const draftEntry = draft?.entries?.find(e=>e.guest_id===g.id);
+    const entryBase = draftEntry || existingEntry || {};
+    const recLevel = entryBase.recommended_level || g.ability_level || 1;
+    const notes = entryBase.progress_notes || '';
+    return `
+    <div class="report-guest-section">
+      <div class="report-guest-name">${buildAvatar(g.name,'sm')} ${g.name}</div>
+      <div class="form-group">
+        <label class="form-label">Recommended Level</label>
+        <div class="level-buttons" id="level-btns-${g.id}">
+          ${[1,2,3,4,5,6,7].map(n=>`<button class="level-btn ${recLevel==n?'selected':''}" onclick="selectLevel('${g.id}',${n})">${n}</button>`).join('')}
+        </div>
+        <input type="hidden" id="rec-level-${g.id}" value="${recLevel}">
+      </div>
+      <div class="form-group mb-8">
+        <label class="form-label">Progress Notes</label>
+        <textarea class="form-field" id="notes-${g.id}" rows="2" ${isReadOnly?'readonly':''} onchange="autoSaveDraft('${lessonId}')">${notes}</textarea>
+      </div>
+    </div>`;
+  }).join('');
+
+  const ro = isReadOnly ? 'readonly' : '';
+  $('instr-report-body').innerHTML = `
+    <div class="subsection-heading">Shared Lesson Details</div>
+    <div class="form-group">
+      <label class="form-label">Terrain Skied</label>
+      <select class="form-field" id="report-terrain" ${isReadOnly?'disabled':''} onchange="autoSaveDraft('${lessonId}')">
+        <option value="">Select terrain...</option>
+        ${terrainOptions.map(t=>`<option value="${t}" ${base.terrain===t?'selected':''}>${t}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Skills Worked On</label>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;" id="skills-wrap">
+        ${skillOptions.map(s=>`<button class="level-btn" style="width:auto;padding:6px 12px;font-size:12px;" onclick="toggleSkill(this,'${s}')" data-skill="${s}" data-selected="${(base.skills||[]).includes(s)?'1':'0'}" style="${(base.skills||[]).includes(s)?'background:var(--black);color:var(--white)':''}">${s}</button>`).join('')}
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Lesson Summary</label>
+      <textarea class="form-field" id="report-summary" rows="2" ${ro} onchange="autoSaveDraft('${lessonId}')">${base.summary||''}</textarea>
+    </div>
+    <div class="divider"></div>
+    <div class="subsection-heading">Per-Guest Assessment</div>
+    ${guestFields}
+    ${isReadOnly ? '' : '<div style="height:80px;"></div>'}`;
+
+  // Mark skill buttons
+  setTimeout(() => {
+    document.querySelectorAll('[data-selected="1"]').forEach(btn => {
+      btn.style.background = 'var(--black)'; btn.style.color = 'var(--white)';
+    });
+  }, 50);
+
+  $('instr-report-actions').innerHTML = isReadOnly ? '' : `
+    <button class="btn btn-outline" onclick="autoSaveDraft('${lessonId}');showToast('Draft saved ✓')">Save Draft</button>
+    <button class="btn btn-primary" style="flex:1;" onclick="submitReport('${lessonId}')">Submit Report →</button>`;
+}
+
+function selectLevel(guestId, level) {
+  $(`rec-level-${guestId}`).value = level;
+  document.querySelectorAll(`#level-btns-${guestId} .level-btn`).forEach((btn,i)=>{
+    btn.classList.toggle('selected', i+1===level);
+  });
+  autoSaveDraft(App.instrReportLessonId);
+}
+
+function toggleSkill(btn) {
+  const isSelected = btn.dataset.selected === '1';
+  btn.dataset.selected = isSelected ? '0' : '1';
+  btn.style.background = isSelected ? '' : 'var(--black)';
+  btn.style.color = isSelected ? '' : 'var(--white)';
+  autoSaveDraft(App.instrReportLessonId);
+}
+
+function autoSaveDraft(lessonId) {
+  const data = collectReportData(lessonId);
+  Store.saveDraft(lessonId, data);
+}
+
+function collectReportData(lessonId) {
+  const bookings = Store.getBookings(lessonId);
+  const guests = Store.getGuests(bookings.map(b=>b.guest_id));
+  const skills = [...document.querySelectorAll('[data-skill][data-selected="1"]')].map(b=>b.dataset.skill);
+  return {
+    terrain: $('report-terrain')?.value || '',
+    skills,
+    summary: $('report-summary')?.value || '',
+    submitted_by: App.instructorId,
+    entries: guests.map(g => ({
+      guest_id: g.id,
+      recommended_level: parseInt($(`rec-level-${g.id}`)?.value || g.ability_level || 1),
+      progress_notes: $(`notes-${g.id}`)?.value || ''
+    }))
+  };
+}
+
+function submitReport(lessonId) {
+  const data = collectReportData(lessonId);
+  if (!data.terrain) { showToast('Please select terrain'); return; }
+  Store.saveReport(lessonId, data);
+  Store.updateLessonStatus(lessonId, 'reported');
+  Store.clearDraft(lessonId);
+  showToast('Report submitted ✓');
+  closeReport();
+  openLessonDetail(lessonId);
+}
+
+function closeReport() {
+  $('instr-report-view').style.display = 'none';
+  $('instr-lesson-detail').style.display = 'block';
+}
+
+// ═══════════════════════════════════════════════════════
+// SUPERVISOR VIEW
+// ═══════════════════════════════════════════════════════
+function renderSupervisor() {
+  const todayStr = dateStr(new Date());
+  $('sup-date-label').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+
+  const allTodayLessons = Store.getLessons({ date: todayStr });
+  const stats = {
+    total: allTodayLessons.length,
+    in_progress: allTodayLessons.filter(l=>l.status==='in_progress').length,
+    completed: allTodayLessons.filter(l=>l.status==='completed').length,
+    reported: allTodayLessons.filter(l=>l.status==='reported').length,
+  };
+  $('sup-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-value">${stats.total}</div><div class="stat-label">Today's Lessons</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--green)">${stats.in_progress}</div><div class="stat-label">In Progress</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--mid-grey)">${stats.completed+stats.reported}</div><div class="stat-label">Done</div></div>`;
+
+  if (App.supTab==='lessons') renderSupLessons(allTodayLessons);
+  else renderSupInstructors();
+}
+
+function supTabSwitch(tab) {
+  App.supTab = tab;
+  $('sup-tab-lessons').classList.toggle('active', tab==='lessons');
+  $('sup-tab-instructors').classList.toggle('active', tab==='instructors');
+  $('sup-lessons-panel').style.display = tab==='lessons' ? 'block' : 'none';
+  $('sup-instructors-panel').style.display = tab==='instructors' ? 'block' : 'none';
+  renderSupervisor();
+}
+
+function renderSupLessons(lessons) {
+  const sorted = [...lessons].sort((a,b)=>{
+    const order = {in_progress:0, scheduled:1, completed:2, reported:3};
+    return order[a.status]-order[b.status];
+  });
+
+  $('sup-lessons-panel').innerHTML = `<div class="sup-table-wrap">
+    <table class="sup-table">
+      <thead><tr>
+        <th>Lesson</th><th>Time</th><th>Guests</th><th>Instructors</th><th>Status</th><th>Actions</th>
+      </tr></thead>
+      <tbody>
+        ${sorted.map(lesson => {
+          const tpl = Store.getTemplate(lesson.lesson_template_id);
+          if (!tpl) return '';
+          const bookings = Store.getBookings(lesson.id);
+          const asgns = Store.getAssignments(lesson.id);
+          const guestNames = Store.getGuests(bookings.map(b=>b.guest_id)).map(g=>g.name.split(' ')[0]).slice(0,3).join(', ');
+          const instrNames = asgns.map(a=>Store.getInstructorById(a.instructor_id)?.name.split(' ')[0]).filter(Boolean).join(', ');
+          const ratioFlag = bookings.length > 0 && asgns.length === 0;
+          const flag = ratioFlag ? `<span class="badge badge-flag">⚠ Unstaffed</span>` : '';
+          return `<tr>
+            <td><strong>${tpl.name}</strong>${typeLabel(tpl.lesson_type)}</td>
+            <td class="font-mono" style="font-size:12px;">${lesson.start_time||'—'}</td>
+            <td style="font-size:12px;">${guestNames}${bookings.length>3?` +${bookings.length-3}`:''}</td>
+            <td style="font-size:12px;">${instrNames||'<span style="color:var(--red)">Unassigned</span>'}</td>
+            <td>${statusBadge(lesson.status)} ${flag}</td>
+            <td><button class="btn btn-ghost btn-sm" onclick="openAssignModal('${lesson.id}')">Assign</button></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>`;
+  $('sup-lessons-panel').style.display = 'block';
+}
+
+function renderSupInstructors() {
+  const instructors = Store.getInstructors();
+  const todayStr = dateStr(new Date());
+  const todayAssgnts = Store.data.assignments.filter(a => {
+    const lesson = Store.getLessonById(a.lesson_id);
+    return lesson && lesson.date === todayStr;
+  });
+  const assignedIds = new Set(todayAssgnts.map(a=>a.instructor_id));
+
+  const groups = { assigned: [], standby: [], training: [] };
+  instructors.forEach(inst => {
+    const grp = assignedIds.has(inst.id) ? 'assigned' : inst.status==='training' ? 'training' : 'standby';
+    groups[grp].push(inst);
+  });
+
+  const groupHtml = (label, list, colorClass) => {
+    if (!list.length) return '';
+    return `<div class="pool-group">
+      <div class="subsection-heading" style="display:flex;align-items:center;gap:8px;">${label} <span class="badge ${colorClass}">${list.length}</span></div>
+      ${list.map(inst => {
+        const disc = Store.getDiscipline(inst.discipline_id);
+        const todayLessons = todayAssgnts.filter(a=>a.instructor_id===inst.id);
+        return `<div class="pool-instructor-card">
+          ${buildAvatar(inst.name,'sm')}
+          <div class="pool-instructor-info">
+            <div class="pool-instructor-name">${inst.name}</div>
+            <div class="pool-instructor-meta">${disc?.name||''} · Max Lv.${inst.max_level}${todayLessons.length?` · ${todayLessons.length} lesson${todayLessons.length>1?'s':''}`:''}</div>
+          </div>
+          ${disciplineLabel(inst.discipline_id)}
+        </div>`;
+      }).join('')}
+    </div>`;
+  };
+
+  $('sup-instructors-panel').innerHTML = `
+    ${groupHtml('Assigned Today', groups.assigned, 'badge-in_progress')}
+    ${groupHtml('Standby', groups.standby, 'badge-scheduled')}
+    ${groupHtml('Training', groups.training, 'badge-reported')}
+    ${!instructors.length ? '<div class="empty-state"><span>No instructors found</span></div>' : ''}`;
+  $('sup-instructors-panel').style.display = 'block';
+}
+
+function openAssignModal(lessonId) {
+  const lesson = Store.getLessonById(lessonId);
+  const tpl = Store.getTemplate(lesson.lesson_template_id);
+  const current = Store.getAssignments(lessonId);
+  const currentIds = new Set(current.map(a=>a.instructor_id));
+  const allInstructors = Store.getInstructors();
+
+  const rows = allInstructors.map(inst => {
+    const isAssigned = currentIds.has(inst.id);
+    const disc = Store.getDiscipline(inst.discipline_id);
+    return `<div class="assign-instructor-row">
+      ${buildAvatar(inst.name,'sm')}
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:600;">${inst.name}</div>
+        <div style="font-size:12px;color:var(--mid-grey);">${disc?.name||''} · Max Lv.${inst.max_level}</div>
+      </div>
+      ${isAssigned
+        ? `<button class="btn btn-danger btn-sm" onclick="removeInstructorFromLesson('${lessonId}','${inst.id}')">Remove</button>`
+        : `<button class="btn btn-green btn-sm" onclick="assignInstructorToLesson('${lessonId}','${inst.id}')">Assign</button>`
+      }
+    </div>`;
+  }).join('');
+
+  openModal(`
+    <div class="modal-header">
+      <div class="modal-title">Assign Instructors</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="text-sm text-mid mb-16"><strong>${tpl?.name}</strong> · ${lesson.start_time}</div>
+    <div class="subsection-heading">Current: ${current.length} assigned</div>
+    ${rows}
+  `);
+}
+
+function assignInstructorToLesson(lessonId, instructorId) {
+  Store.addAssignment(lessonId, instructorId);
+  showToast('Instructor assigned ✓');
+  closeModal();
+  renderSupervisor();
+}
+function removeInstructorFromLesson(lessonId, instructorId) {
+  Store.removeAssignment(lessonId, instructorId);
+  showToast('Instructor removed');
+  closeModal();
+  renderSupervisor();
+}
+
+// ═══════════════════════════════════════════════════════
+// GUEST VIEW
+// ═══════════════════════════════════════════════════════
+function renderGuest() {
+  const guest = Store.getGuestById(App.guestId);
+  if (!guest) return;
+
+  // Welcome banner
+  const entries = Store.getGuestReportEntries(App.guestId);
+  const latestLevel = entries.length ? entries[0].recommended_level : guest.ability_level;
+  $('guest-welcome-banner').innerHTML = `
+    <div class="upcoming-banner">
+      <div class="ub-label">Welcome back</div>
+      <div class="ub-name">${guest.name}</div>
+      <div class="ub-meta">${['','Beginner','Level 1','Level 2','Level 3','Level 4','Level 5','Expert'][latestLevel]} · ${entries.length} lesson${entries.length!==1?'s':''} completed</div>
+    </div>`;
+
+  // Stats
+  const guestBookings = Store.getGuestBookings(App.guestId);
+  const upcomingCount = guestBookings.filter(b => {
+    const l = Store.getLessonById(b.lesson_id);
+    return l && l.date >= dateStr(new Date()) && l.status !== 'reported';
+  }).length;
+  $('guest-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-value">${entries.length}</div><div class="stat-label">Lessons Done</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--saffron)">${upcomingCount}</div><div class="stat-label">Upcoming</div></div>
+    <div class="stat-card"><div class="stat-value">${levelLabel(latestLevel)}</div><div class="stat-label" style="margin-top:6px;">Current Level</div></div>`;
+
+  if (App.guestTab==='upcoming') renderGuestUpcoming();
+  else if (App.guestTab==='book') renderGuestBook();
+  else if (App.guestTab==='history') renderGuestHistory();
+  else renderGuestProfile();
+}
+
+function guestTabSwitch(tab) {
+  App.guestTab = tab;
+  ['upcoming','book','history','profile'].forEach(t => {
+    $(`guest-tab-${t}`).classList.toggle('active', t===tab);
+    $(`guest-${t}-panel`).style.display = t===tab ? 'block' : 'none';
+  });
+  renderGuest();
+}
+
+function renderGuestUpcoming() {
+  const bookings = Store.getGuestBookings(App.guestId);
+  const todayStr = dateStr(new Date());
+  const upcoming = bookings
+    .map(b => { const l=Store.getLessonById(b.lesson_id); return l?{booking:b,lesson:l}:null; })
+    .filter(x=>x && x.lesson.date >= todayStr && x.lesson.status !== 'reported')
+    .sort((a,b)=>a.lesson.date.localeCompare(b.lesson.date));
+
+  if (!upcoming.length) {
+    $('guest-upcoming-panel').innerHTML = `<div class="empty-state"><span class="empty-state-icon">📅</span><div class="empty-state-title">No upcoming lessons</div><div class="empty-state-text">Browse available lessons to book your next session!</div></div>`;
+    return;
+  }
+
+  $('guest-upcoming-panel').innerHTML = upcoming.map(({lesson}) => {
+    const tpl = Store.getTemplate(lesson.lesson_template_id);
+    const asgns = Store.getAssignments(lesson.id);
+    const instrNames = asgns.map(a=>Store.getInstructorById(a.instructor_id)?.name).filter(Boolean).join(', ');
+    return `
+    <div class="book-card">
+      <div class="flex-between mb-8">
+        <div style="font-size:15px;font-weight:600;">${tpl?.name||'Lesson'}</div>
+        ${statusBadge(lesson.status)}
+      </div>
+      <div class="lc-meta" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+        ${tpl ? typeLabel(tpl.lesson_type) : ''}
+        ${tpl ? disciplineLabel(tpl.discipline_id) : ''}
+        ${tpl?.level_numeric ? levelLabel(tpl.level_numeric) : ''}
+      </div>
+      <div class="text-sm text-mid">📅 ${lesson.date ? new Date(lesson.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'}) : ''}</div>
+      <div class="text-sm text-mid">🕐 ${lesson.start_time||'TBD'} – ${lesson.end_time||'TBD'}</div>
+      <div class="text-sm text-mid">📍 ${tpl?.location||'—'}</div>
+      ${instrNames ? `<div class="text-sm text-mid mt-8">👨‍🏫 ${instrNames}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function renderGuestBook() {
+  const todayStr = dateStr(new Date());
+  const next4 = [];
+  for (let d=0; d<=4; d++) next4.push(dateStr(addDays(new Date(), d)));
+
+  const guestBookings = new Set(Store.getGuestBookings(App.guestId).map(b=>b.lesson_id));
+  const available = [];
+  next4.forEach(dateS => {
+    const lessons = Store.getLessons({ date: dateS }).filter(l => l.status === 'scheduled' && !guestBookings.has(l.id));
+    available.push(...lessons);
+  });
+
+  if (!available.length) {
+    $('guest-book-panel').innerHTML = `<div class="empty-state"><span class="empty-state-icon">🎿</span><div class="empty-state-title">No available lessons</div><div class="empty-state-text">Check back tomorrow for new openings.</div></div>`;
+    return;
+  }
+
+  $('guest-book-panel').innerHTML = `
+    <div class="text-sm text-mid mb-16">Available lessons for the next 4 days</div>
+    ${available.map(lesson => {
+      const tpl = Store.getTemplate(lesson.lesson_template_id);
+      if (!tpl) return '';
+      const bookings = Store.getBookings(lesson.id);
+      const spotsLeft = (tpl.max_capacity||8) - bookings.length;
+      return `
+      <div class="book-card">
+        <div class="flex-between mb-8">
+          <div style="font-size:15px;font-weight:600;">${tpl.name}</div>
+          ${spotsLeft <= 2 ? `<span class="badge badge-flag">⚡ ${spotsLeft} spots</span>` : `<span class="badge badge-scheduled">${spotsLeft} spots</span>`}
+        </div>
+        <div class="lc-meta" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+          ${typeLabel(tpl.lesson_type)}
+          ${disciplineLabel(tpl.discipline_id)}
+          ${tpl.level_numeric ? levelLabel(tpl.level_numeric) : ''}
+        </div>
+        <div class="text-sm text-mid">📅 ${new Date(lesson.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'})}</div>
+        <div class="text-sm text-mid">🕐 ${lesson.start_time} – ${lesson.end_time}</div>
+        <div class="text-sm text-mid">📍 ${tpl.location}</div>
+        <div style="margin-top:14px;">
+          <button class="btn btn-primary btn-full" onclick="bookLesson('${lesson.id}')">Book This Lesson →</button>
+        </div>
+      </div>`;
+    }).join('')}`;
+}
+
+function bookLesson(lessonId) {
+  const success = Store.addBooking(lessonId, App.guestId);
+  if (success) {
+    showToast('Lesson booked! 🎿');
+    renderGuest();
+  } else {
+    showToast('Already booked');
+  }
+}
+
+function renderGuestHistory() {
+  const entries = Store.getGuestReportEntries(App.guestId);
+  if (!entries.length) {
+    $('guest-history-panel').innerHTML = `<div class="empty-state"><span class="empty-state-icon">📋</span><div class="empty-state-title">No history yet</div><div class="empty-state-text">Your lesson reports will appear here after your instructors submit them.</div></div>`;
+    return;
+  }
+  $('guest-history-panel').innerHTML = entries.map(e => `
+    <div class="history-item">
+      <div class="history-item-header">
+        <div>
+          <div style="font-size:15px;font-weight:600;">${e.tpl?.name||'Lesson'}</div>
+          <div class="history-item-date">${e.lesson?.date ? new Date(e.lesson.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'}) : ''}</div>
+          ${e.instructor ? `<div class="text-xs mt-8">with ${e.instructor.name}</div>` : ''}
+        </div>
+        <div>${levelLabel(e.recommended_level)}</div>
+      </div>
+      ${e.report?.terrain ? `<div class="text-xs">⛷ ${e.report.terrain}</div>` : ''}
+      ${e.report?.skills?.length ? `<div class="text-xs mt-8">Skills: ${e.report.skills.join(' · ')}</div>` : ''}
+      <div class="divider"></div>
+      <div class="history-item-notes" style="font-style:italic;">"${e.progress_notes}"</div>
+    </div>`).join('');
+}
+
+function renderGuestProfile() {
+  const guest = Store.getGuestById(App.guestId);
+  const entries = Store.getGuestReportEntries(App.guestId);
+  const latestLevel = entries.length ? entries[0].recommended_level : guest.ability_level;
+  const levelNames = {1:'Beginner',2:'Level 1',3:'Level 2',4:'Level 3',5:'Level 4',6:'Level 5',7:'Expert'};
+
+  $('guest-profile-panel').innerHTML = `
+    <div style="text-align:center;padding:24px 0 16px;">
+      ${buildAvatar(guest.name,'lg')}
+      <div style="font-family:var(--font-display);font-size:24px;font-weight:700;margin-top:12px;">${guest.name}</div>
+      <div class="text-sm text-mid">${guest.nationality||''} · Age ${guest.age}</div>
+    </div>
+    <div class="info-grid">
+      <div class="info-cell"><div class="info-cell-label">Current Level</div><div class="info-cell-value">${levelLabel(latestLevel)}</div></div>
+      <div class="info-cell"><div class="info-cell-label">Lessons Taken</div><div class="info-cell-value">${entries.length}</div></div>
+      <div class="info-cell"><div class="info-cell-label">Stay Until</div><div class="info-cell-value">${guest.stay_end||'—'}</div></div>
+      <div class="info-cell"><div class="info-cell-label">Level Name</div><div class="info-cell-value">${levelNames[latestLevel]||'—'}</div></div>
+    </div>
+    <div class="subsection-heading">Progress Journey</div>
+    <div class="card">
+      <div style="padding:16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <div style="font-size:13px;color:var(--mid-grey);">Level progression:</div>
+          ${[1,2,3,4,5,6,7].map(n=>`<div style="width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;background:${n<=latestLevel?'var(--black)':'var(--pearl)'};color:${n<=latestLevel?'var(--white)':'var(--grey)'};">${n}</div>`).join('')}
+        </div>
+        <div class="text-sm text-mid">Currently at <strong>${levelNames[latestLevel]||''}</strong></div>
+      </div>
+    </div>
+    <div style="margin-top:20px;">
+      <label class="form-label">Viewing as Guest</label>
+      <select class="form-field" onchange="switchGuest(this.value)">
+        ${Store.getGuests().slice(0,20).map(g=>`<option value="${g.id}" ${g.id===App.guestId?'selected':''}>${g.name}</option>`).join('')}
+      </select>
+    </div>`;
+}
+
+function switchGuest(guestId) {
+  App.guestId = guestId;
+  saveAppState();
+  $('role-identity-label').textContent = Store.getGuestById(guestId)?.name||'Guest';
+  renderGuest();
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+function resetData() {
+  if (confirm('Reset all data to seed? This cannot be undone.')) { Store.reset(); }
+}
+
+function init() {
+  Store.init();
+  loadState();
+
+  // Header date
+  $('header-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+
+  // Initial role
+  switchRole(App.role);
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
