@@ -102,11 +102,81 @@ ul { list-style: none; }
   font-size: 12px; color: var(--grey); font-family: var(--font-mono);
 }
 .btn-reset {
-  font-size: 11px; font-family: var(--font-mono); color: var(--grey);
-  padding: 4px 10px; border-radius: var(--r-pill); border: 1px solid rgba(255,255,255,0.15);
-  transition: var(--t);
+  font-size: 14px; font-family: var(--font-mono); color: var(--grey);
+  padding: 4px 8px; border-radius: var(--r-pill); border: 1px solid rgba(255,255,255,0.15);
+  transition: var(--t); line-height: 1;
 }
 .btn-reset:hover { color: var(--white); border-color: rgba(255,255,255,0.4); }
+
+/* ─── ROLE CHIP (mobile) ── */
+.role-chip-btn {
+  display: none;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--white);
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: var(--r-pill);
+  padding: 5px 10px;
+  transition: var(--t);
+  white-space: nowrap;
+}
+.role-chip-btn:hover { background: rgba(255,255,255,0.13); }
+.role-chip-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+}
+.role-chip-btn[data-role="instructor"] .role-chip-dot { background: var(--saffron); }
+.role-chip-btn[data-role="supervisor"] .role-chip-dot { background: #60a5fa; }
+.role-chip-btn[data-role="guest"]      .role-chip-dot { background: #4ade80; }
+.role-chip-chevron { opacity: 0.45; font-size: 9px; margin-left: 1px; }
+
+/* ─── ROLE POPOVER ── */
+#role-popover-backdrop {
+  display: none; position: fixed; inset: 0; z-index: 498;
+}
+#role-popover-backdrop.open { display: block; }
+#role-popover {
+  display: none;
+  position: fixed;
+  top: 52px; right: 12px;
+  background: #1c1c1e;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  z-index: 499;
+  min-width: 170px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.3);
+}
+#role-popover.open { display: block; }
+.role-popover-item {
+  display: flex; align-items: center; gap: 0;
+  padding: 13px 16px;
+  font-family: var(--font-mono); font-size: 12px; font-weight: 500;
+  color: var(--white);
+  background: none; border: none; width: 100%; text-align: left;
+  cursor: pointer; transition: background 0.12s;
+}
+.role-popover-item:not(:last-child) { border-bottom: 1px solid rgba(255,255,255,0.06); }
+.role-popover-item:hover { background: rgba(255,255,255,0.07); }
+.role-popover-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-right: 10px;
+}
+.role-popover-item[data-role="instructor"] .role-popover-dot { background: var(--saffron); }
+.role-popover-item[data-role="supervisor"] .role-popover-dot { background: #60a5fa; }
+.role-popover-item[data-role="guest"]      .role-popover-dot { background: #4ade80; }
+.role-popover-check { margin-left: auto; color: var(--saffron); font-size: 13px; opacity: 0; }
+.role-popover-item.active .role-popover-check { opacity: 1; }
+
+/* ─── RESPONSIVE ROLE BAR ── */
+@media (max-width: 767px) {
+  .role-tabs { display: none; }
+  .role-chip-btn { display: flex; }
+  .role-identity { display: none; }
+}
 
 /* ─── MAIN HEADER ── */
 #main-header {
@@ -579,8 +649,27 @@ textarea.form-field { resize: vertical; min-height: 80px; }
     <div class="role-bar-spacer"></div>
     <div class="role-bar-right">
       <span class="role-identity" id="role-identity-label"></span>
-      <button class="btn-reset" onclick="resetData()">↺ Reset</button>
+      <button class="role-chip-btn" id="role-chip-btn" data-role="instructor" onclick="toggleRolePopover()">
+        <span class="role-chip-dot"></span>
+        <span id="role-chip-label">INSTRUCTOR</span>
+        <span class="role-chip-chevron">▾</span>
+      </button>
+      <button class="btn-reset" onclick="resetData()" title="Reset data">↺</button>
     </div>
+  </div>
+
+  <!-- ROLE POPOVER -->
+  <div id="role-popover-backdrop" onclick="closeRolePopover()"></div>
+  <div id="role-popover">
+    <button class="role-popover-item active" data-role="instructor" onclick="switchRole('instructor'); closeRolePopover()">
+      <span class="role-popover-dot"></span>Instructor<span class="role-popover-check">✓</span>
+    </button>
+    <button class="role-popover-item" data-role="supervisor" onclick="switchRole('supervisor'); closeRolePopover()">
+      <span class="role-popover-dot"></span>Supervisor<span class="role-popover-check">✓</span>
+    </button>
+    <button class="role-popover-item" data-role="guest" onclick="switchRole('guest'); closeRolePopover()">
+      <span class="role-popover-dot"></span>Guest<span class="role-popover-check">✓</span>
+    </button>
   </div>
 
   <!-- MAIN HEADER -->
@@ -1067,6 +1156,22 @@ function saveAppState() {
 }
 
 // ═══════════════════════════════════════════════════════
+// ROLE POPOVER
+// ═══════════════════════════════════════════════════════
+function toggleRolePopover() {
+  const open = $('role-popover').classList.contains('open');
+  open ? closeRolePopover() : openRolePopover();
+}
+function openRolePopover() {
+  $('role-popover').classList.add('open');
+  $('role-popover-backdrop').classList.add('open');
+}
+function closeRolePopover() {
+  $('role-popover').classList.remove('open');
+  $('role-popover-backdrop').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════════
 // ROLE SWITCHING
 // ═══════════════════════════════════════════════════════
 function switchRole(role) {
@@ -1074,6 +1179,14 @@ function switchRole(role) {
   document.querySelectorAll('.role-tab').forEach(t => t.classList.toggle('active', t.dataset.role===role));
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   $(`view-${role}`).classList.add('active');
+
+  // Sync chip & popover state
+  const labels = { instructor: 'INSTRUCTOR', supervisor: 'SUPERVISOR', guest: 'GUEST' };
+  $('role-chip-label').textContent = labels[role];
+  $('role-chip-btn').dataset.role = role;
+  document.querySelectorAll('.role-popover-item').forEach(el =>
+    el.classList.toggle('active', el.dataset.role === role)
+  );
 
   // Reset sub-views
   if (role==='instructor') {
