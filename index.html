@@ -314,30 +314,57 @@ textarea.form-field { resize: vertical; min-height: 80px; }
 
 /* ─── MODAL ── */
 .modal-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  position: fixed; inset: 0; background: rgba(0,0,0,0.45);
   display: flex; align-items: flex-end; justify-content: center;
   z-index: 500; opacity: 0; pointer-events: none;
-  transition: opacity 0.2s;
+  transition: opacity 0.28s;
+  backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
 }
 @media (min-width: 600px) {
   .modal-overlay { align-items: center; }
 }
 .modal-overlay.open { opacity: 1; pointer-events: all; }
 .modal {
-  background: var(--white); border-radius: 20px 20px 0 0;
-  width: 100%; max-width: 560px; max-height: 90vh;
-  overflow-y: auto; padding: 24px;
-  transform: translateY(40px); transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  background: var(--white); border-radius: 24px 24px 0 0;
+  width: 100%; max-width: 580px; max-height: 88vh;
+  display: flex; flex-direction: column; overflow: hidden;
+  transform: translateY(52px);
+  transition: transform 0.36s cubic-bezier(0.32, 0.72, 0, 1);
 }
 @media (min-width: 600px) {
-  .modal { border-radius: 16px; transform: scale(0.95); }
-  .modal-overlay.open .modal { transform: scale(1); }
+  .modal { border-radius: 20px; transform: translateY(12px) scale(0.97); max-height: 84vh; }
+  .modal-overlay.open .modal { transform: translateY(0) scale(1); }
 }
 .modal-overlay.open .modal { transform: translateY(0); }
-.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-.modal-title { font-family: var(--font-display); font-size: 22px; font-weight: 600; }
-.modal-close { width: 32px; height: 32px; border-radius: 50%; background: var(--pearl); color: var(--dark-grey); font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: var(--t); }
+.modal-drag-handle {
+  width: 36px; height: 4px; border-radius: 2px; background: var(--sand);
+  margin: 10px auto 0; flex-shrink: 0;
+}
+@media (min-width: 600px) { .modal-drag-handle { display: none; } }
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px 14px; border-bottom: 1px solid var(--pearl);
+  flex-shrink: 0;
+}
+.modal-title { font-family: var(--font-display); font-size: 20px; font-weight: 600; line-height: 1.2; }
+.modal-close {
+  width: 30px; height: 30px; border-radius: 50%; background: var(--pearl);
+  color: var(--dark-grey); font-size: 14px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: var(--t); flex-shrink: 0;
+}
 .modal-close:hover { background: var(--light-grey); }
+.modal-body {
+  flex: 1; overflow-y: auto; padding: 18px 20px 12px;
+  scrollbar-width: none; -ms-overflow-style: none;
+}
+.modal-body::-webkit-scrollbar { display: none; }
+.modal-footer {
+  flex-shrink: 0; padding: 12px 20px;
+  border-top: 1px solid var(--pearl);
+  display: flex; gap: 10px; background: var(--white);
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
+}
 
 /* ─── GUEST PROFILE INLINE ── */
 .guest-row {
@@ -581,17 +608,6 @@ textarea.form-field { resize: vertical; min-height: 80px; }
         <div class="detail-header" id="instr-detail-header"></div>
         <div class="detail-scroll" id="instr-detail-body"></div>
         <div class="action-bar" id="instr-detail-actions"></div>
-      </div>
-      <!-- Guest Profile sub-view -->
-      <div id="instr-guest-profile" style="display:none; position:fixed; inset:0; top:100px; background:var(--light-sand); z-index:60; overflow:hidden;">
-        <div class="detail-header" id="instr-gp-header"></div>
-        <div class="detail-scroll" id="instr-gp-body"></div>
-      </div>
-      <!-- Report sub-view -->
-      <div id="instr-report-view" style="display:none; position:fixed; inset:0; top:100px; background:var(--light-sand); z-index:55; overflow:hidden;">
-        <div class="detail-header" id="instr-report-header"></div>
-        <div class="detail-scroll" id="instr-report-body"></div>
-        <div class="action-bar" id="instr-report-actions"></div>
       </div>
     </div>
 
@@ -1119,8 +1135,7 @@ function renderInstructor() {
 function showInstrSchedule() {
   $('instr-schedule').style.display = 'block';
   $('instr-lesson-detail').style.display = 'none';
-  $('instr-guest-profile').style.display = 'none';
-  $('instr-report-view').style.display = 'none';
+  closeModal();
 }
 
 function renderInstrSchedule() {
@@ -1310,18 +1325,7 @@ function openGuestProfile(guestId) {
   if (!guest) return;
   const entries = Store.getGuestReportEntries(guestId);
   const latestLevel = entries.length ? entries[0].recommended_level : guest.ability_level;
-
-  $('instr-guest-profile').style.display = 'block';
-
-  $('instr-gp-header').innerHTML = `
-    <div class="detail-back" onclick="closeGuestProfile()">← Back to Lesson</div>
-    <div style="display:flex;align-items:center;gap:12px;margin-top:6px;">
-      ${buildAvatar(guest.name,'lg')}
-      <div>
-        <div class="detail-header-title">${guest.name}</div>
-        <div class="detail-header-sub">Age ${guest.age} · ${['','Beginner','Level 1','Level 2','Level 3','Level 4','Level 5','Expert'][latestLevel]||''}</div>
-      </div>
-    </div>`;
+  const levelName = ['','Beginner','Level 1','Level 2','Level 3','Level 4','Level 5','Expert'][latestLevel] || '';
 
   const historyHtml = entries.length ? entries.map(e => `
     <div class="history-item">
@@ -1336,20 +1340,31 @@ function openGuestProfile(guestId) {
       ${e.instructor ? `<div class="text-xs mt-8">Instructor: ${e.instructor.name}</div>` : ''}
       ${e.report?.terrain ? `<div class="text-xs mt-8">Terrain: ${e.report.terrain}</div>` : ''}
       ${e.report?.skills?.length ? `<div class="text-xs mt-8">Skills: ${e.report.skills.join(', ')}</div>` : ''}
-    </div>`) : `<div class="empty-state"><span class="empty-state-icon">📋</span><div class="empty-state-title">No lesson history yet</div></div>`;
+    </div>`).join('') : `<div class="empty-state"><span class="empty-state-icon">📋</span><div class="empty-state-title">No lesson history yet</div></div>`;
 
-  $('instr-gp-body').innerHTML = `
-    <div class="info-grid">
-      <div class="info-cell"><div class="info-cell-label">Current Level</div><div class="info-cell-value">${levelLabel(latestLevel)}</div></div>
-      <div class="info-cell"><div class="info-cell-label">Lessons</div><div class="info-cell-value">${entries.length}</div></div>
-      <div class="info-cell"><div class="info-cell-label">Nationality</div><div class="info-cell-value">${guest.nationality||'—'}</div></div>
-      <div class="info-cell"><div class="info-cell-label">Stay</div><div class="info-cell-value" style="font-size:12px;">${guest.stay_end || '—'}</div></div>
+  openModal(`
+    <div class="modal-drag-handle"></div>
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:12px;">
+        ${buildAvatar(guest.name,'md')}
+        <div>
+          <div class="modal-title">${guest.name}</div>
+          <div style="font-size:13px;color:var(--mid-grey);margin-top:1px;">Age ${guest.age} · ${levelName}</div>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
-    <div class="subsection-heading">Lesson History (${entries.length})</div>
-    ${historyHtml}`;
-}
-function closeGuestProfile() {
-  $('instr-guest-profile').style.display = 'none';
+    <div class="modal-body">
+      <div class="info-grid" style="margin-bottom:20px;">
+        <div class="info-cell"><div class="info-cell-label">Current Level</div><div class="info-cell-value">${levelLabel(latestLevel)}</div></div>
+        <div class="info-cell"><div class="info-cell-label">Lessons</div><div class="info-cell-value">${entries.length}</div></div>
+        <div class="info-cell"><div class="info-cell-label">Nationality</div><div class="info-cell-value">${guest.nationality||'—'}</div></div>
+        <div class="info-cell"><div class="info-cell-label">Stay Until</div><div class="info-cell-value" style="font-size:12px;">${guest.stay_end||'—'}</div></div>
+      </div>
+      <div class="subsection-heading" style="margin-top:0;">Lesson History (${entries.length})</div>
+      ${historyHtml}
+    </div>
+  `);
 }
 
 // ─── LESSON REPORT ───────────────────────────────────────
@@ -1360,15 +1375,7 @@ function openReport(lessonId) {
   const bookings = Store.getBookings(lessonId);
   const guests = Store.getGuests(bookings.map(b=>b.guest_id));
   const isReadOnly = lesson.status === 'reported';
-
-  $('instr-schedule').style.display = 'none';
-  $('instr-lesson-detail').style.display = 'none';
-  $('instr-report-view').style.display = 'block';
-
-  $('instr-report-header').innerHTML = `
-    <div class="detail-back" onclick="closeReport()">← Back to Lesson</div>
-    <div class="detail-header-title">${isReadOnly?'Lesson Report':'Submit Report'}: ${tpl.name}</div>
-    <div class="detail-header-sub">${lesson.date ? new Date(lesson.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'}) : ''}</div>`;
+  const lessonDateStr = lesson.date ? new Date(lesson.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'}) : '';
 
   // Load draft or existing report
   const existingReport = Store.getReport(lessonId);
@@ -1402,8 +1409,8 @@ function openReport(lessonId) {
   }).join('');
 
   const ro = isReadOnly ? 'readonly' : '';
-  $('instr-report-body').innerHTML = `
-    <div class="subsection-heading">Shared Lesson Details</div>
+  const bodyHtml = `
+    <div class="subsection-heading" style="margin-top:0;">Shared Lesson Details</div>
     <div class="form-group">
       <label class="form-label">Terrain Skied</label>
       <select class="form-field" id="report-terrain" ${isReadOnly?'disabled':''} onchange="autoSaveDraft('${lessonId}')">
@@ -1423,13 +1430,25 @@ function openReport(lessonId) {
     </div>
     <div class="divider"></div>
     <div class="subsection-heading">Per-Guest Assessment</div>
-    ${guestFields}
-    ${isReadOnly ? '' : '<div style="height:80px;"></div>'}`;
+    ${guestFields}`;
 
-  $('instr-report-actions').innerHTML = isReadOnly
-    ? `<div style="text-align:center;font-size:12px;color:var(--mid-grey);font-family:var(--font-mono);letter-spacing:0.5px;padding:4px 0;">READ ONLY — Report already submitted</div>`
+  const footerHtml = isReadOnly
+    ? `<div style="text-align:center;font-size:12px;color:var(--mid-grey);font-family:var(--font-mono);letter-spacing:0.5px;width:100%;padding:2px 0;">READ ONLY — Report already submitted</div>`
     : `<button class="btn btn-outline" onclick="autoSaveDraft('${lessonId}');showToast('Draft saved ✓')">Save Draft</button>
        <button class="btn btn-primary" style="flex:1;" onclick="submitReport('${lessonId}')">Submit Report →</button>`;
+
+  openModal(`
+    <div class="modal-drag-handle"></div>
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">${isReadOnly ? 'Lesson Report' : 'Submit Report'}</div>
+        <div style="font-size:13px;color:var(--mid-grey);margin-top:2px;">${tpl.name} · ${lessonDateStr}</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">${bodyHtml}</div>
+    <div class="modal-footer">${footerHtml}</div>
+  `);
 }
 
 function selectLevel(guestId, level) {
@@ -1476,14 +1495,11 @@ function submitReport(lessonId) {
   Store.updateLessonStatus(lessonId, 'reported');
   Store.clearDraft(lessonId);
   showToast('Report submitted ✓');
-  closeReport();
+  closeModal();
   openLessonDetail(lessonId);
 }
 
-function closeReport() {
-  $('instr-report-view').style.display = 'none';
-  $('instr-lesson-detail').style.display = 'block';
-}
+function closeReport() { closeModal(); }
 
 // ═══════════════════════════════════════════════════════
 // SUPERVISOR VIEW
@@ -1619,13 +1635,18 @@ function openAssignModal(lessonId) {
   }).join('');
 
   openModal(`
+    <div class="modal-drag-handle"></div>
     <div class="modal-header">
-      <div class="modal-title">Assign Instructors</div>
+      <div>
+        <div class="modal-title">Assign Instructors</div>
+        <div style="font-size:13px;color:var(--mid-grey);margin-top:2px;"><strong>${tpl?.name}</strong> · ${lesson.start_time}</div>
+      </div>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
-    <div class="text-sm text-mid mb-16"><strong>${tpl?.name}</strong> · ${lesson.start_time}</div>
-    <div class="subsection-heading">Current: ${current.length} assigned</div>
-    ${rows}
+    <div class="modal-body">
+      <div class="subsection-heading" style="margin-top:0;">Currently assigned: ${current.length}</div>
+      ${rows}
+    </div>
   `);
 }
 
