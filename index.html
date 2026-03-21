@@ -1790,7 +1790,7 @@ function renderGuest() {
     <div class="upcoming-banner">
       <div class="ub-label">Welcome back</div>
       <div class="ub-name">${guest.name}</div>
-      <div class="ub-meta">${['','Beginner','Level 1','Level 2','Level 3','Level 4','Level 5','Expert'][latestLevel]} · ${entries.length} lesson${entries.length!==1?'s':''} completed</div>
+      <div class="ub-meta">${levelLabel(latestLevel)} · ${entries.length} lesson${entries.length!==1?'s':''} completed</div>
     </div>`;
 
   // Stats
@@ -1802,7 +1802,7 @@ function renderGuest() {
   $('guest-stats').innerHTML = `
     <div class="stat-card"><div class="stat-value">${entries.length}</div><div class="stat-label">Lessons Done</div></div>
     <div class="stat-card"><div class="stat-value" style="color:var(--saffron)">${upcomingCount}</div><div class="stat-label">Upcoming</div></div>
-    <div class="stat-card"><div class="stat-value">${latestLevel}</div><div class="stat-label">Current Level</div></div>`;
+    <div class="stat-card"><div class="stat-value" style="font-size:14px;">${levelLabel(latestLevel)}</div><div class="stat-label">Current Level</div></div>`;
 
   if (App.guestTab==='upcoming') renderGuestUpcoming();
   else if (App.guestTab==='book') renderGuestBook();
