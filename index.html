@@ -953,11 +953,25 @@ function generateSeedData() {
     }
   });
 
-  // Bookings: 3–6 guests per lesson
+  // Bookings: 3–6 eligible guests per lesson
+  // Rules: Adults (age >= 13) → Adult lessons only; Kids (age < 13) → Kids lessons only.
+  // Guest must also participate in the lesson's discipline (have ability_levels entry for it).
   const bookings = [];
   lessons.forEach((lesson, li) => {
-    const n = 3 + Math.floor(Math.random()*4);
-    const shuffled = [...guests].sort(()=>Math.random()-0.5).slice(0,n);
+    const tpl = templates.find(t=>t.id===lesson.lesson_template_id);
+    if (!tpl) return;
+    const eligible = guests.filter(g => {
+      const ageOk = tpl.lesson_type === 'Private'
+        ? true
+        : tpl.lesson_type === 'Kids' ? g.age < 13 : g.age >= 13;
+      const discOk = tpl.lesson_type === 'Private'
+        ? true
+        : g.ability_levels && g.ability_levels[tpl.discipline_id] != null;
+      return ageOk && discOk;
+    });
+    if (!eligible.length) return;
+    const n = Math.min(3 + Math.floor(Math.random()*4), eligible.length);
+    const shuffled = [...eligible].sort(()=>Math.random()-0.5).slice(0,n);
     shuffled.forEach(g => {
       bookings.push({ id:`bk-${uuid()}`, lesson_id: lesson.id, guest_id: g.id, booking_status: 'active', created_at: new Date().toISOString() });
     });
@@ -986,7 +1000,7 @@ function generateSeedData() {
     const lessonBookings = bookings.filter(b=>b.lesson_id===lesson.id&&b.booking_status==='active');
     const lessonTpl = templates.find(t=>t.id===lesson.lesson_template_id);
     const discId = lessonTpl?.discipline_id;
-    const maxLevelForDisc = discId==='disc-2' ? (lesson.lesson_type==='Kids'?4:5) : 7;
+    const maxLevelForDisc = discId==='disc-2' ? (lessonTpl?.lesson_type==='Kids'?4:5) : 7;
     lessonBookings.forEach(bk => {
       const guest = guests.find(g=>g.id===bk.guest_id);
       const baseLevel = (discId ? guest.ability_levels?.[discId] : null) || 1;
