@@ -313,7 +313,7 @@ ul { list-style: none; }
 
 /* ─── PILL TAGS ── */
 .pill { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: var(--r-pill); }
-.pill-level { background: var(--black); color: var(--white); font-family: var(--font-mono); font-size: 11px; }
+.pill-level { display: none; }
 .pill-guests { background: var(--pearl); color: var(--dark-grey); border: 1px solid var(--light-grey); }
 .pill-loc { background: var(--light-sand); color: var(--dark-grey); border: 1px solid var(--sand); font-size: 11px; }
 .pill-instructors { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; font-size: 11px; }
@@ -568,14 +568,9 @@ textarea.form-field { resize: vertical; min-height: 80px; }
   background: var(--pearl); border-radius: 10px; padding: 16px; margin-bottom: 12px;
 }
 .report-guest-name { font-size: 14px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-.level-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
-.level-btn {
-  width: 36px; height: 36px; border-radius: 8px; font-size: 13px; font-weight: 600;
-  background: var(--white); color: var(--dark-grey); border: 1.5px solid var(--light-grey);
-  cursor: pointer; transition: var(--t); display: flex; align-items: center; justify-content: center;
-}
-.level-btn:hover { border-color: var(--black); }
-.level-btn.selected { background: var(--black); color: var(--white); border-color: var(--black); }
+.level-slider { width: 100%; accent-color: var(--black); cursor: pointer; }
+.level-slider:disabled { opacity: 0.5; cursor: default; }
+.level-slider-label { font-size: 13px; font-weight: 600; text-align: center; margin-top: 6px; color: var(--dark-grey); }
 
 /* ─── SKILL TOGGLE BUTTONS ── */
 .skill-toggle-btn {
@@ -859,12 +854,13 @@ function generateSeedData() {
     { id: 'tpl-17', name: 'TRIDENT 1',   lesson_type: 'Kids',  discipline_id: 'disc-1', level_numeric: 3, start_time: '9:30 AM',  end_time: '11:30 AM', location: 'Mini Club', max_capacity: 8 },
     { id: 'tpl-18', name: 'DRAGON',      lesson_type: 'Kids',  discipline_id: 'disc-1', level_numeric: 2, start_time: '9:30 AM',  end_time: '11:30 AM', location: 'Mini Club', max_capacity: 8 },
     { id: 'tpl-19', name: 'TIGER',       lesson_type: 'Kids',  discipline_id: 'disc-1', level_numeric: 1, start_time: '9:45 AM',  end_time: '11:45 AM', location: 'Mini Club', max_capacity: 8 },
-    { id: 'tpl-20', name: 'PANDA',       lesson_type: 'Kids',  discipline_id: 'disc-1', level_numeric: 1, start_time: '10:00 AM', end_time: '11:30 AM', location: 'Mini Club', max_capacity: 8 },
+    { id: 'tpl-20', name: 'PANDA',       lesson_type: 'Kids',  discipline_id: 'disc-1', level_numeric: 0.5, start_time: '10:00 AM', end_time: '11:30 AM', location: 'Mini Club', max_capacity: 8 },
     { id: 'tpl-21', name: 'RIDER 3',     lesson_type: 'Kids',  discipline_id: 'disc-2', level_numeric: 4, start_time: '9:00 AM',  end_time: '11:15 AM', location: 'Mini Club', max_capacity: 8 },
     { id: 'tpl-22', name: 'RIDER 2',     lesson_type: 'Kids',  discipline_id: 'disc-2', level_numeric: 3, start_time: '9:00 AM',  end_time: '11:15 AM', location: 'Mini Club', max_capacity: 8 },
     { id: 'tpl-23', name: 'RIDER 1',     lesson_type: 'Kids',  discipline_id: 'disc-2', level_numeric: 2, start_time: '9:00 AM',  end_time: '11:00 AM', location: 'Mini Club', max_capacity: 8 },
     { id: 'tpl-24', name: 'RIDER',       lesson_type: 'Kids',  discipline_id: 'disc-2', level_numeric: 1, start_time: '9:00 AM',  end_time: '11:00 AM', location: 'Mini Club', max_capacity: 8 },
     { id: 'tpl-25', name: 'PRIVATE SKI', lesson_type: 'Private', discipline_id: 'disc-1', level_numeric: null, start_time: null, end_time: null, location: 'Locker #', max_capacity: null },
+    { id: 'tpl-26', name: 'PRIVATE SB',  lesson_type: 'Private', discipline_id: 'disc-2', level_numeric: null, start_time: null, end_time: null, location: 'Locker #', max_capacity: null },
   ];
 
   // Generate 50 guests
@@ -1496,6 +1492,16 @@ function openReport(lessonId) {
   const skillOptions = ['Parallel turns','Edge control','Carving','Short turns','Moguls','Speed control','Powder technique','Balance','Slalom','Off-piste','Safety','Rhythm'];
   const terrainOptions = ['Green runs (Sakura, Maple)','Blue runs (Alpine, Summit)','Red runs (Expert, Couloir)','Mixed terrain','Off-piste areas','Race course'];
 
+  // Build level name map for this lesson's discipline/type
+  const disciplineTemplates = Store.data.templates
+    .filter(t => t.discipline_id === tpl.discipline_id && t.lesson_type === tpl.lesson_type && t.level_numeric)
+    .sort((a,b) => a.level_numeric - b.level_numeric);
+  const levelMap = {};
+  disciplineTemplates.forEach(t => { if (!levelMap[t.level_numeric]) levelMap[t.level_numeric] = t.name; });
+  const sliderMin = disciplineTemplates.length ? disciplineTemplates[0].level_numeric : 1;
+  const sliderMax = disciplineTemplates.length ? disciplineTemplates[disciplineTemplates.length-1].level_numeric : 7;
+  App.reportLevelMap = levelMap;
+
   const guestFields = guests.map(g => {
     const existingEntry = existingReport ? Store.getReportEntries(existingReport.id).find(e=>e.guest_id===g.id) : null;
     const draftEntry = draft?.entries?.find(e=>e.guest_id===g.id);
@@ -1507,10 +1513,9 @@ function openReport(lessonId) {
       <div class="report-guest-name">${buildAvatar(g.name,'sm')} ${g.name}</div>
       <div class="form-group">
         <label class="form-label">Recommended Level</label>
-        <div class="level-buttons" id="level-btns-${g.id}">
-          ${[1,2,3,4,5,6,7].map(n=>`<button class="level-btn ${recLevel==n?'selected':''}" onclick="selectLevel('${g.id}',${n})">${n}</button>`).join('')}
-        </div>
-        <input type="hidden" id="rec-level-${g.id}" value="${recLevel}">
+        <input type="range" class="level-slider" min="${sliderMin}" max="${sliderMax}" value="${recLevel}"
+          id="rec-level-${g.id}" ${isReadOnly ? 'disabled' : `oninput="updateLevelDisplay('${g.id}',this.value)" onchange="autoSaveDraft('${lessonId}')"`}>
+        <div class="level-slider-label" id="level-display-${g.id}">${levelMap[recLevel] || ''}</div>
       </div>
       <div class="form-group mb-8">
         <label class="form-label">Progress Notes</label>
@@ -1562,12 +1567,9 @@ function openReport(lessonId) {
   `);
 }
 
-function selectLevel(guestId, level) {
-  $(`rec-level-${guestId}`).value = level;
-  document.querySelectorAll(`#level-btns-${guestId} .level-btn`).forEach((btn,i)=>{
-    btn.classList.toggle('selected', i+1===level);
-  });
-  autoSaveDraft(App.instrReportLessonId);
+function updateLevelDisplay(guestId, value) {
+  const name = App.reportLevelMap?.[parseInt(value)] || '';
+  $(`level-display-${guestId}`).textContent = name;
 }
 
 function toggleSkill(btn) {
@@ -1706,7 +1708,7 @@ function renderSupInstructors() {
           ${buildAvatar(inst.name,'sm')}
           <div class="pool-instructor-info">
             <div class="pool-instructor-name">${inst.name}</div>
-            <div class="pool-instructor-meta">${disc?.name||''} · Max Lv.${inst.max_level}${todayLessons.length?` · ${todayLessons.length} lesson${todayLessons.length>1?'s':''}`:''}</div>
+            <div class="pool-instructor-meta">${disc?.name||''} · up to ${levelLabel(inst.max_level)}${todayLessons.length?` · ${todayLessons.length} lesson${todayLessons.length>1?'s':''}`:''}</div>
           </div>
           ${disciplineLabel(inst.discipline_id)}
         </div>`;
@@ -1736,7 +1738,7 @@ function openAssignModal(lessonId) {
       ${buildAvatar(inst.name,'sm')}
       <div style="flex:1;">
         <div style="font-size:14px;font-weight:600;">${inst.name}</div>
-        <div style="font-size:12px;color:var(--mid-grey);">${disc?.name||''} · Max Lv.${inst.max_level}</div>
+        <div style="font-size:12px;color:var(--mid-grey);">${disc?.name||''} · up to ${levelLabel(inst.max_level)}</div>
       </div>
       ${isAssigned
         ? `<button class="btn btn-danger btn-sm" onclick="removeInstructorFromLesson('${lessonId}','${inst.id}')">Remove</button>`
@@ -1950,9 +1952,12 @@ function renderGuestProfile() {
     <div class="subsection-heading">Progress Journey</div>
     <div class="card">
       <div style="padding:16px;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-          <div style="font-size:13px;color:var(--mid-grey);">Level progression:</div>
-          ${[1,2,3,4,5,6,7].map(n=>`<div style="width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;background:${n<=latestLevel?'var(--black)':'var(--pearl)'};color:${n<=latestLevel?'var(--white)':'var(--grey)'};">${n}</div>`).join('')}
+        <div style="font-size:12px;color:var(--mid-grey);margin-bottom:8px;">Level Progression</div>
+        <div style="position:relative;height:6px;background:var(--pearl);border-radius:3px;margin-bottom:6px;">
+          <div style="position:absolute;left:0;top:0;height:100%;width:${(((latestLevel||1)-1)/6*100).toFixed(0)}%;background:var(--black);border-radius:3px;"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--mid-grey);margin-bottom:8px;">
+          <span>Beginner</span><span>Expert</span>
         </div>
         <div class="text-sm text-mid">Currently at <strong>${levelNames[latestLevel]||''}</strong></div>
       </div>
