@@ -896,14 +896,15 @@ function generateSeedData() {
   // Kids guests
   const kidsStay = () => ({ stay_start: dateStr(addDays(TODAY, -3 + Math.floor(Math.random()*3))), stay_end: dateStr(addDays(TODAY, 2 + Math.floor(Math.random()*4))) });
   guests.push(
-    { id:'guest-k1', name:'Yuki Tanaka',   age:8,  ability_levels:{'disc-1':2},           ...kidsStay(), nationality:'JP' },
-    { id:'guest-k2', name:'Leo Dubois',    age:10, ability_levels:{'disc-1':3},           ...kidsStay(), nationality:'FR' },
-    { id:'guest-k3', name:'Mia Wilson',    age:7,  ability_levels:{'disc-1':1},           ...kidsStay(), nationality:'GB' },
-    { id:'guest-k4', name:'Tom Chen',      age:11, ability_levels:{'disc-2':2},           ...kidsStay(), nationality:'US' },
-    { id:'guest-k5', name:'Sara Park',     age:9,  ability_levels:{'disc-1':4,'disc-2':1},...kidsStay(), nationality:'JP' },
-    { id:'guest-k6', name:'Noah Martin',   age:6,  ability_levels:{'disc-1':1},           ...kidsStay(), nationality:'DE' },
-    { id:'guest-k7', name:'Ava Rossi',     age:12, ability_levels:{'disc-1':5},           ...kidsStay(), nationality:'CH' },
-    { id:'guest-k8', name:'Kai Andersen',  age:10, ability_levels:{'disc-2':3},           ...kidsStay(), nationality:'CA' }
+    // coreTpls covers Kids Ski levels 5–7 (TRIDENT 3/BRONZE/GOLD). Kids start at 5 to allow progression.
+    { id:'guest-k1', name:'Yuki Tanaka',   age:8,  ability_levels:{'disc-1':5}, ...kidsStay(), nationality:'JP' },
+    { id:'guest-k2', name:'Leo Dubois',    age:10, ability_levels:{'disc-1':6}, ...kidsStay(), nationality:'FR' },
+    { id:'guest-k3', name:'Mia Wilson',    age:7,  ability_levels:{'disc-1':5}, ...kidsStay(), nationality:'GB' },
+    { id:'guest-k4', name:'Tom Chen',      age:11, ability_levels:{'disc-1':5}, ...kidsStay(), nationality:'US' },
+    { id:'guest-k5', name:'Sara Park',     age:9,  ability_levels:{'disc-1':6}, ...kidsStay(), nationality:'JP' },
+    { id:'guest-k6', name:'Noah Martin',   age:6,  ability_levels:{'disc-1':5}, ...kidsStay(), nationality:'DE' },
+    { id:'guest-k7', name:'Ava Rossi',     age:12, ability_levels:{'disc-1':7}, ...kidsStay(), nationality:'CH' },
+    { id:'guest-k8', name:'Kai Andersen',  age:10, ability_levels:{'disc-1':5}, ...kidsStay(), nationality:'CA' }
   );
 
   // Generate lessons: 4 per day for 14 days, using a rotation of templates
@@ -953,31 +954,17 @@ function generateSeedData() {
     }
   });
 
-  // Bookings: 3–6 eligible guests per lesson
-  // Rules: Adults (age >= 13) → Adult lessons only; Kids (age < 13) → Kids lessons only.
-  // Guest must also participate in the lesson's discipline (have ability_levels entry for it).
-  const bookings = [];
-  lessons.forEach((lesson, li) => {
-    const tpl = templates.find(t=>t.id===lesson.lesson_template_id);
-    if (!tpl) return;
-    const eligible = guests.filter(g => {
-      const ageOk = tpl.lesson_type === 'Private'
-        ? true
-        : tpl.lesson_type === 'Kids' ? g.age < 13 : g.age >= 13;
-      const discOk = tpl.lesson_type === 'Private'
-        ? true
-        : g.ability_levels && g.ability_levels[tpl.discipline_id] != null;
-      return ageOk && discOk;
-    });
-    if (!eligible.length) return;
-    const n = Math.min(3 + Math.floor(Math.random()*4), eligible.length);
-    const shuffled = [...eligible].sort(()=>Math.random()-0.5).slice(0,n);
-    shuffled.forEach(g => {
-      bookings.push({ id:`bk-${uuid()}`, lesson_id: lesson.id, guest_id: g.id, booking_status: 'active', created_at: new Date().toISOString() });
-    });
-  });
+  // Bookings + reports: processed chronologically so level progression is observed.
+  // Rules:
+  //   - Adults (age >= 13) → Adult lessons only; Kids (age < 13) → Kids lessons only.
+  //   - Guest must participate in the lesson's discipline (ability_levels entry exists).
+  //   - Guest can book lessons at their current level or 1 level below, never above.
+  //   - Current level = max recommended_level across all their past reported lessons (per discipline).
+  //   - Instructor recommended_level is current level or +1 (never below current, never above disc max).
+  const guestCurrentLevels = {}; // { guestId: { discId: maxLevel } } — updated as reports are filed
+  guests.forEach(g => { guestCurrentLevels[g.id] = { ...(g.ability_levels || {}) }; });
 
-  // Lesson reports for completed/reported lessons
+  const bookings = [];
   const reports = [];
   const reportEntries = [];
   const skillSets = [
@@ -985,40 +972,66 @@ function generateSeedData() {
     ['Powder technique','Balance'],['Slalom basics','Rhythm'],['Off-piste intro','Safety']
   ];
   const terrains = ['Green runs (Sakura, Maple)','Blue runs (Alpine, Summit)','Red runs (Expert, Couloir)','Mixed terrain'];
+  const progressNotes = [
+    'Showed great improvement with edge control today.',
+    'Needs more practice on upper body rotation.',
+    'Ready to progress to the next level.',
+    'Good parallel turns but struggles on steeper terrain.',
+    'Excellent attitude — very coachable.',
+    'Making steady progress, keep practicing turns.',
+  ];
 
-  lessons.filter(l=>l.status==='reported').forEach((lesson,ri) => {
-    const rid = `rep-${uuid()}`;
-    const asgn = assignments.find(a=>a.lesson_id===lesson.id&&a.role==='lead');
-    reports.push({
-      id: rid, lesson_id: lesson.id,
-      submitted_by: asgn ? asgn.instructor_id : 'inst-1',
-      terrain: terrains[ri%4],
-      skills: skillSets[ri%6],
-      summary: 'Good session overall. Group made solid progress.',
-      created_at: new Date().toISOString()
+  let reportIndex = 0;
+  lessons.forEach(lesson => {
+    const tpl = templates.find(t=>t.id===lesson.lesson_template_id);
+    if (!tpl || !tpl.level_numeric) return; // Private lessons have no level — skip
+    const discId = tpl.discipline_id;
+    const lessonLevel = tpl.level_numeric;
+    const lessonType = tpl.lesson_type;
+    const maxLevelForDisc = discId==='disc-2' ? (lessonType==='Kids'?4:5) : 7;
+
+    // Eligible: correct age group + participates in this discipline + level at/within 1 of lesson level
+    const eligible = guests.filter(g => {
+      const ageOk = lessonType === 'Kids' ? g.age < 13 : g.age >= 13;
+      const curLevel = guestCurrentLevels[g.id]?.[discId];
+      if (!ageOk || curLevel == null) return false;
+      return curLevel >= lessonLevel && curLevel <= lessonLevel + 1;
     });
-    const lessonBookings = bookings.filter(b=>b.lesson_id===lesson.id&&b.booking_status==='active');
-    const lessonTpl = templates.find(t=>t.id===lesson.lesson_template_id);
-    const discId = lessonTpl?.discipline_id;
-    const maxLevelForDisc = discId==='disc-2' ? (lessonTpl?.lesson_type==='Kids'?4:5) : 7;
-    lessonBookings.forEach(bk => {
-      const guest = guests.find(g=>g.id===bk.guest_id);
-      const baseLevel = (discId ? guest.ability_levels?.[discId] : null) || 1;
-      const recLevel = Math.min(maxLevelForDisc, baseLevel + (Math.random()>0.6?1:0));
-      reportEntries.push({
-        id: `re-${uuid()}`, report_id: rid, guest_id: bk.guest_id,
-        recommended_level: recLevel,
-        progress_notes: [
-          'Showed great improvement with edge control today.',
-          'Needs more practice on upper body rotation.',
-          'Ready to progress to the next level.',
-          'Good parallel turns but struggles on steeper terrain.',
-          'Excellent attitude — very coachable.',
-          'Making steady progress, keep practicing turns.',
-        ][Math.floor(Math.random()*6)],
+    if (!eligible.length) return;
+
+    const n = Math.min(3 + Math.floor(Math.random()*4), eligible.length);
+    const booked = [...eligible].sort(()=>Math.random()-0.5).slice(0,n);
+    booked.forEach(g => {
+      bookings.push({ id:`bk-${uuid()}`, lesson_id:lesson.id, guest_id:g.id, booking_status:'active', created_at:new Date().toISOString() });
+    });
+
+    // Generate report + update levels for reported lessons
+    if (lesson.status === 'reported') {
+      const rid = `rep-${uuid()}`;
+      const asgn = assignments.find(a=>a.lesson_id===lesson.id&&a.role==='lead');
+      reports.push({
+        id: rid, lesson_id: lesson.id,
+        submitted_by: asgn ? asgn.instructor_id : 'inst-1',
+        terrain: terrains[reportIndex%4],
+        skills: skillSets[reportIndex%6],
+        summary: 'Good session overall. Group made solid progress.',
         created_at: new Date().toISOString()
       });
-    });
+      booked.forEach(g => {
+        const curLevel = guestCurrentLevels[g.id][discId];
+        // 30% chance instructor recommends advancing; otherwise stay at current
+        const recLevel = Math.min(maxLevelForDisc, curLevel + (Math.random() < 0.3 ? 1 : 0));
+        reportEntries.push({
+          id: `re-${uuid()}`, report_id: rid, guest_id: g.id,
+          recommended_level: recLevel,
+          progress_notes: progressNotes[Math.floor(Math.random()*progressNotes.length)],
+          created_at: new Date().toISOString()
+        });
+        // Advance tracked level to max of current and recommended
+        guestCurrentLevels[g.id][discId] = Math.max(curLevel, recLevel);
+      });
+      reportIndex++;
+    }
   });
 
   return { resort, disciplines, instructors, templates, lessons, guests, bookings, assignments, reports, reportEntries };
@@ -1121,7 +1134,7 @@ const Store = {
   getReportEntries(reportId) { return this.data.reportEntries.filter(e=>e.report_id===reportId); },
   getGuestLatestLevelByDisc(guestId, disciplineId) {
     const entries = this.getGuestReportEntries(guestId).filter(e=>e.tpl?.discipline_id===disciplineId);
-    if (entries.length) return entries[0].recommended_level;
+    if (entries.length) return Math.max(...entries.map(e=>e.recommended_level));
     const guest = this.getGuestById(guestId);
     return guest?.ability_levels?.[disciplineId] || null;
   },
@@ -1277,10 +1290,12 @@ function getLevelName(n, disciplineId, lessonType) {
 function getGuestAllLevels(guest) {
   const entries = Store.getGuestReportEntries(guest.id);
   const result = {};
+  // Max recommended_level per discipline across all report history
   entries.forEach(e => {
     const discId = e.tpl?.discipline_id;
-    if (discId && result[discId] === undefined) result[discId] = e.recommended_level;
+    if (discId) result[discId] = Math.max(result[discId] || 0, e.recommended_level);
   });
+  // Fall back to ability_levels for disciplines with no report history yet
   Object.entries(guest.ability_levels || {}).forEach(([discId, lvl]) => {
     if (result[discId] === undefined && lvl) result[discId] = lvl;
   });
@@ -1929,10 +1944,26 @@ function renderGuestBook() {
   const next4 = [];
   for (let d=0; d<=4; d++) next4.push(dateStr(addDays(new Date(), d)));
 
+  const guest = Store.getGuestById(App.guestId);
   const guestBookings = new Set(Store.getGuestBookings(App.guestId).map(b=>b.lesson_id));
   const available = [];
   next4.forEach(dateS => {
-    const lessons = Store.getLessons({ date: dateS }).filter(l => l.status === 'scheduled' && !guestBookings.has(l.id));
+    const lessons = Store.getLessons({ date: dateS }).filter(l => {
+      if (l.status !== 'scheduled' || guestBookings.has(l.id)) return false;
+      const tpl = Store.getTemplate(l.lesson_template_id);
+      if (!tpl) return false;
+      // Age group must match
+      const ageOk = tpl.lesson_type === 'Private' ? true
+        : tpl.lesson_type === 'Kids' ? guest.age < 13 : guest.age >= 13;
+      if (!ageOk) return false;
+      // For levelled lessons: guest must be at lesson level or 1 above (1 below for guest)
+      if (tpl.level_numeric) {
+        const curLevel = Store.getGuestLatestLevelByDisc(App.guestId, tpl.discipline_id);
+        if (curLevel == null) return false;
+        return curLevel >= tpl.level_numeric && curLevel <= tpl.level_numeric + 1;
+      }
+      return true;
+    });
     available.push(...lessons);
   });
 
@@ -1969,6 +2000,15 @@ function renderGuestBook() {
 }
 
 function bookLesson(lessonId) {
+  const lesson = Store.getLessonById(lessonId);
+  const tpl = Store.getTemplate(lesson?.lesson_template_id);
+  if (tpl?.level_numeric) {
+    const curLevel = Store.getGuestLatestLevelByDisc(App.guestId, tpl.discipline_id);
+    if (curLevel == null || curLevel < tpl.level_numeric || curLevel > tpl.level_numeric + 1) {
+      showToast('This lesson doesn\'t match your current level');
+      return;
+    }
+  }
   const success = Store.addBooking(lessonId, App.guestId);
   if (success) {
     showToast('Lesson booked! 🎿');
