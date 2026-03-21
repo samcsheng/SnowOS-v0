@@ -872,17 +872,39 @@ function generateSeedData() {
   const guestLastNames = ['Smith','Johnson','Chen','Müller','Tanaka','Dubois','Wilson','Rossi','Park','Andersen',
     'Garcia','Sato','Martin','Kim','Taylor','Brown','Nakamura','Davis','Lopez','White'];
 
-  const guests = guestFirstNames.map((fn,i) => ({
-    id: `guest-${i+1}`,
-    name: `${fn} ${guestLastNames[i%20]}`,
-    age: 18 + Math.floor(Math.random()*42),
-    ability_level: Math.ceil(Math.random()*7),
-    stay_start: dateStr(addDays(TODAY, -7 + Math.floor(Math.random()*5))),
-    stay_end: dateStr(addDays(TODAY, 1 + Math.floor(Math.random()*6))),
-    nationality: ['FR','JP','US','DE','GB','CA','AU','CH'][i%8]
-  }));
+  // Level caps per discipline/type: Adult Ski 1-7, Adult SB 1-5, Kids Ski 1-7, Kids SB 1-4
+  const guests = guestFirstNames.map((fn,i) => {
+    const isDualDisc = i % 7 === 3; // every 7th guest (offset 3) participates in both disciplines
+    const skiLevel = Math.ceil(Math.random()*6) + 1; // 2-7 to keep it realistic
+    const sbLevel  = Math.ceil(Math.random()*4) + 1; // 2-5 max for SB
+    return {
+      id: `guest-${i+1}`,
+      name: `${fn} ${guestLastNames[i%20]}`,
+      age: 18 + Math.floor(Math.random()*42),
+      ability_levels: isDualDisc
+        ? { 'disc-1': Math.ceil(Math.random()*6) + 1, 'disc-2': Math.ceil(Math.random()*3) + 1 }
+        : { 'disc-1': Math.ceil(Math.random()*6) + 1 },
+      stay_start: dateStr(addDays(TODAY, -7 + Math.floor(Math.random()*5))),
+      stay_end: dateStr(addDays(TODAY, 1 + Math.floor(Math.random()*6))),
+      nationality: ['FR','JP','US','DE','GB','CA','AU','CH'][i%8]
+    };
+  });
   // Anna is guest-1
   guests[0].name = 'Anna Smith';
+  guests[0].ability_levels = { 'disc-1': 3 }; // fix Anna to a known level
+
+  // Kids guests
+  const kidsStay = () => ({ stay_start: dateStr(addDays(TODAY, -3 + Math.floor(Math.random()*3))), stay_end: dateStr(addDays(TODAY, 2 + Math.floor(Math.random()*4))) });
+  guests.push(
+    { id:'guest-k1', name:'Yuki Tanaka',   age:8,  ability_levels:{'disc-1':2},           ...kidsStay(), nationality:'JP' },
+    { id:'guest-k2', name:'Leo Dubois',    age:10, ability_levels:{'disc-1':3},           ...kidsStay(), nationality:'FR' },
+    { id:'guest-k3', name:'Mia Wilson',    age:7,  ability_levels:{'disc-1':1},           ...kidsStay(), nationality:'GB' },
+    { id:'guest-k4', name:'Tom Chen',      age:11, ability_levels:{'disc-2':2},           ...kidsStay(), nationality:'US' },
+    { id:'guest-k5', name:'Sara Park',     age:9,  ability_levels:{'disc-1':4,'disc-2':1},...kidsStay(), nationality:'JP' },
+    { id:'guest-k6', name:'Noah Martin',   age:6,  ability_levels:{'disc-1':1},           ...kidsStay(), nationality:'DE' },
+    { id:'guest-k7', name:'Ava Rossi',     age:12, ability_levels:{'disc-1':5},           ...kidsStay(), nationality:'CH' },
+    { id:'guest-k8', name:'Kai Andersen',  age:10, ability_levels:{'disc-2':3},           ...kidsStay(), nationality:'CA' }
+  );
 
   // Generate lessons: 4 per day for 14 days, using a rotation of templates
   const coreTpls = ['tpl-1','tpl-2','tpl-3','tpl-4','tpl-5','tpl-13','tpl-14','tpl-15','tpl-8','tpl-9'];
@@ -962,9 +984,13 @@ function generateSeedData() {
       created_at: new Date().toISOString()
     });
     const lessonBookings = bookings.filter(b=>b.lesson_id===lesson.id&&b.booking_status==='active');
+    const lessonTpl = templates.find(t=>t.id===lesson.lesson_template_id);
+    const discId = lessonTpl?.discipline_id;
+    const maxLevelForDisc = discId==='disc-2' ? (lesson.lesson_type==='Kids'?4:5) : 7;
     lessonBookings.forEach(bk => {
       const guest = guests.find(g=>g.id===bk.guest_id);
-      const recLevel = Math.min(7, (guest.ability_level||1) + (Math.random()>0.6?1:0));
+      const baseLevel = (discId ? guest.ability_levels?.[discId] : null) || 1;
+      const recLevel = Math.min(maxLevelForDisc, baseLevel + (Math.random()>0.6?1:0));
       reportEntries.push({
         id: `re-${uuid()}`, report_id: rid, guest_id: bk.guest_id,
         recommended_level: recLevel,
@@ -1079,6 +1105,12 @@ const Store = {
   // Reports
   getReport(lessonId) { return this.data.reports.find(r=>r.lesson_id===lessonId); },
   getReportEntries(reportId) { return this.data.reportEntries.filter(e=>e.report_id===reportId); },
+  getGuestLatestLevelByDisc(guestId, disciplineId) {
+    const entries = this.getGuestReportEntries(guestId).filter(e=>e.tpl?.discipline_id===disciplineId);
+    if (entries.length) return entries[0].recommended_level;
+    const guest = this.getGuestById(guestId);
+    return guest?.ability_levels?.[disciplineId] || null;
+  },
   getGuestReportEntries(guestId) {
     const entries = this.data.reportEntries.filter(e=>e.guest_id===guestId);
     return entries.map(e => {
@@ -1218,10 +1250,34 @@ function disciplineLabel(discId) {
   if (discId==='disc-1') return `<span class="badge badge-ski">⛷ Ski</span>`;
   return `<span class="badge badge-sb">🏂 Snowboard</span>`;
 }
-function levelLabel(n) {
-  if (!n) return '';
-  const labels = {1:'Beginner',2:'Level 1',3:'Level 2',4:'Level 3',5:'Level 4',6:'Level 5',7:'Expert'};
-  return labels[n]||'';
+function guestLessonType(guest) {
+  return guest && guest.age < 13 ? 'Kids' : 'Adult';
+}
+function getLevelName(n, disciplineId, lessonType) {
+  if (!n || !disciplineId || !lessonType) return '';
+  const tpl = Store.data.templates.find(
+    t => t.discipline_id === disciplineId && t.lesson_type === lessonType && t.level_numeric === n
+  );
+  return tpl?.name || '';
+}
+function getGuestAllLevels(guest) {
+  const entries = Store.getGuestReportEntries(guest.id);
+  const result = {};
+  entries.forEach(e => {
+    const discId = e.tpl?.discipline_id;
+    if (discId && result[discId] === undefined) result[discId] = e.recommended_level;
+  });
+  Object.entries(guest.ability_levels || {}).forEach(([discId, lvl]) => {
+    if (result[discId] === undefined && lvl) result[discId] = lvl;
+  });
+  return result;
+}
+function guestLevelSummary(guest) {
+  const levels = getGuestAllLevels(guest);
+  const lt = guestLessonType(guest);
+  return Object.entries(levels)
+    .map(([discId, n]) => getLevelName(n, discId, lt))
+    .filter(Boolean).join(' · ') || '';
 }
 function typeLabel(t) {
   if (t==='Kids') return `<span class="badge badge-kids">👶 Kids</span>`;
@@ -1358,7 +1414,7 @@ function openLessonDetail(lessonId) {
       ${buildAvatar(g.name,'sm')}
       <div class="guest-row-info" onclick="openGuestProfile('${g.id}')">
         <div class="guest-row-name">${g.name}</div>
-        <div class="guest-row-meta">Age ${g.age} · ${levelLabel(g.ability_level)}</div>
+        <div class="guest-row-meta">Age ${g.age} · ${getLevelName(Store.getGuestLatestLevelByDisc(g.id, tpl.discipline_id), tpl.discipline_id, guestLessonType(g))}</div>
       </div>
       <div class="guest-row-right">
         <button class="btn btn-ghost btn-sm" onclick="openGuestProfile('${g.id}')">View →</button>
@@ -1431,8 +1487,8 @@ function openGuestProfile(guestId) {
   const guest = Store.getGuestById(guestId);
   if (!guest) return;
   const entries = Store.getGuestReportEntries(guestId);
-  const latestLevel = entries.length ? entries[0].recommended_level : guest.ability_level;
-  const levelName = ['','Beginner','Level 1','Level 2','Level 3','Level 4','Level 5','Expert'][latestLevel] || '';
+  const lt = guestLessonType(guest);
+  const levelSummary = guestLevelSummary(guest);
 
   const historyHtml = entries.length ? entries.map(e => `
     <div class="history-item">
@@ -1441,7 +1497,7 @@ function openGuestProfile(guestId) {
           <div style="font-size:14px;font-weight:600;">${e.tpl?.name||'Lesson'}</div>
           <div class="history-item-date">${e.lesson?.date ? new Date(e.lesson.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) : ''}</div>
         </div>
-        <div>${levelLabel(e.recommended_level)}</div>
+        <div style="font-size:12px;font-weight:600;color:var(--dark-grey);">${getLevelName(e.recommended_level, e.tpl?.discipline_id, lt)}</div>
       </div>
       <div class="history-item-notes">${e.progress_notes}</div>
       ${e.instructor ? `<div class="text-xs mt-8">Instructor: ${e.instructor.name}</div>` : ''}
@@ -1456,14 +1512,14 @@ function openGuestProfile(guestId) {
         ${buildAvatar(guest.name,'md')}
         <div>
           <div class="modal-title">${guest.name}</div>
-          <div style="font-size:13px;color:var(--mid-grey);margin-top:1px;">Age ${guest.age} · ${levelName}</div>
+          <div style="font-size:13px;color:var(--mid-grey);margin-top:1px;">Age ${guest.age}${levelSummary ? ' · ' + levelSummary : ''}</div>
         </div>
       </div>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
     <div class="modal-body">
       <div class="info-grid" style="margin-bottom:20px;">
-        <div class="info-cell"><div class="info-cell-label">Current Level</div><div class="info-cell-value">${levelLabel(latestLevel)}</div></div>
+        <div class="info-cell"><div class="info-cell-label">Current Level</div><div class="info-cell-value" style="font-size:12px;">${levelSummary||'—'}</div></div>
         <div class="info-cell"><div class="info-cell-label">Lessons</div><div class="info-cell-value">${entries.length}</div></div>
         <div class="info-cell"><div class="info-cell-label">Nationality</div><div class="info-cell-value">${guest.nationality||'—'}</div></div>
         <div class="info-cell"><div class="info-cell-label">Stay Until</div><div class="info-cell-value" style="font-size:12px;">${guest.stay_end||'—'}</div></div>
@@ -1506,7 +1562,7 @@ function openReport(lessonId) {
     const existingEntry = existingReport ? Store.getReportEntries(existingReport.id).find(e=>e.guest_id===g.id) : null;
     const draftEntry = draft?.entries?.find(e=>e.guest_id===g.id);
     const entryBase = draftEntry || existingEntry || {};
-    const recLevel = entryBase.recommended_level || g.ability_level || 1;
+    const recLevel = entryBase.recommended_level || g.ability_levels?.[tpl.discipline_id] || 1;
     const notes = entryBase.progress_notes || '';
     return `
     <div class="report-guest-section">
@@ -1595,7 +1651,7 @@ function collectReportData(lessonId) {
     submitted_by: App.instructorId,
     entries: guests.map(g => ({
       guest_id: g.id,
-      recommended_level: parseInt($(`rec-level-${g.id}`)?.value || g.ability_level || 1),
+      recommended_level: parseInt($(`rec-level-${g.id}`)?.value || g.ability_levels?.[tpl.discipline_id] || 1),
       progress_notes: $(`notes-${g.id}`)?.value || ''
     }))
   };
@@ -1708,7 +1764,7 @@ function renderSupInstructors() {
           ${buildAvatar(inst.name,'sm')}
           <div class="pool-instructor-info">
             <div class="pool-instructor-name">${inst.name}</div>
-            <div class="pool-instructor-meta">${disc?.name||''} · up to ${levelLabel(inst.max_level)}${todayLessons.length?` · ${todayLessons.length} lesson${todayLessons.length>1?'s':''}`:''}</div>
+            <div class="pool-instructor-meta">${disc?.name||''} · up to ${getLevelName(inst.max_level, inst.discipline_id, 'Adult')}${todayLessons.length?` · ${todayLessons.length} lesson${todayLessons.length>1?'s':''}`:''}</div>
           </div>
           ${disciplineLabel(inst.discipline_id)}
         </div>`;
@@ -1738,7 +1794,7 @@ function openAssignModal(lessonId) {
       ${buildAvatar(inst.name,'sm')}
       <div style="flex:1;">
         <div style="font-size:14px;font-weight:600;">${inst.name}</div>
-        <div style="font-size:12px;color:var(--mid-grey);">${disc?.name||''} · up to ${levelLabel(inst.max_level)}</div>
+        <div style="font-size:12px;color:var(--mid-grey);">${disc?.name||''} · up to ${getLevelName(inst.max_level, inst.discipline_id, 'Adult')}</div>
       </div>
       ${isAssigned
         ? `<button class="btn btn-danger btn-sm" onclick="removeInstructorFromLesson('${lessonId}','${inst.id}')">Remove</button>`
@@ -1785,12 +1841,12 @@ function renderGuest() {
 
   // Welcome banner
   const entries = Store.getGuestReportEntries(App.guestId);
-  const latestLevel = entries.length ? entries[0].recommended_level : guest.ability_level;
+  const levelSummary = guestLevelSummary(guest);
   $('guest-welcome-banner').innerHTML = `
     <div class="upcoming-banner">
       <div class="ub-label">Welcome back</div>
       <div class="ub-name">${guest.name}</div>
-      <div class="ub-meta">${levelLabel(latestLevel)} · ${entries.length} lesson${entries.length!==1?'s':''} completed</div>
+      <div class="ub-meta">${levelSummary ? levelSummary + ' · ' : ''}${entries.length} lesson${entries.length!==1?'s':''} completed</div>
     </div>`;
 
   // Stats
@@ -1802,7 +1858,7 @@ function renderGuest() {
   $('guest-stats').innerHTML = `
     <div class="stat-card"><div class="stat-value">${entries.length}</div><div class="stat-label">Lessons Done</div></div>
     <div class="stat-card"><div class="stat-value" style="color:var(--saffron)">${upcomingCount}</div><div class="stat-label">Upcoming</div></div>
-    <div class="stat-card"><div class="stat-value" style="font-size:14px;">${levelLabel(latestLevel)}</div><div class="stat-label">Current Level</div></div>`;
+    <div class="stat-card"><div class="stat-value" style="font-size:13px;">${levelSummary||'—'}</div><div class="stat-label">Current Level</div></div>`;
 
   if (App.guestTab==='upcoming') renderGuestUpcoming();
   else if (App.guestTab==='book') renderGuestBook();
@@ -1922,7 +1978,7 @@ function renderGuestHistory() {
           <div class="history-item-date">${e.lesson?.date ? new Date(e.lesson.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'}) : ''}</div>
           ${e.instructor ? `<div class="text-xs mt-8">with ${e.instructor.name}</div>` : ''}
         </div>
-        <div>${levelLabel(e.recommended_level)}</div>
+        <div style="font-size:12px;font-weight:600;color:var(--dark-grey);">${getLevelName(e.recommended_level, e.tpl?.discipline_id, guestLessonType(Store.getGuestById(App.guestId)))}</div>
       </div>
       ${e.report?.terrain ? `<div class="text-xs">⛷ ${e.report.terrain}</div>` : ''}
       ${e.report?.skills?.length ? `<div class="text-xs mt-8">Skills: ${e.report.skills.join(' · ')}</div>` : ''}
@@ -1934,8 +1990,30 @@ function renderGuestHistory() {
 function renderGuestProfile() {
   const guest = Store.getGuestById(App.guestId);
   const entries = Store.getGuestReportEntries(App.guestId);
-  const latestLevel = entries.length ? entries[0].recommended_level : guest.ability_level;
-  const levelNames = {1:'Beginner',2:'Level 1',3:'Level 2',4:'Level 3',5:'Level 4',6:'Level 5',7:'Expert'};
+  const lt = guestLessonType(guest);
+  const allLevels = getGuestAllLevels(guest);
+  const profileLevelSummary = guestLevelSummary(guest);
+
+  // Per-discipline progress bars
+  const progressBars = Object.entries(allLevels).map(([discId, n]) => {
+    const disc = Store.getDiscipline(discId);
+    const name = getLevelName(n, discId, lt);
+    const maxN = discId==='disc-2' ? (lt==='Kids'?4:5) : 7;
+    const pct = (((n||1)-1)/(maxN-1)*100).toFixed(0);
+    const firstTpl = Store.data.templates.filter(t=>t.discipline_id===discId&&t.lesson_type===lt&&t.level_numeric).sort((a,b)=>a.level_numeric-b.level_numeric);
+    const firstName = firstTpl[0]?.name||'';
+    const lastName = firstTpl[firstTpl.length-1]?.name||'';
+    return `<div style="margin-bottom:12px;">
+      <div style="font-size:11px;color:var(--mid-grey);margin-bottom:4px;">${disc?.name||''}</div>
+      <div style="position:relative;height:6px;background:var(--pearl);border-radius:3px;margin-bottom:4px;">
+        <div style="position:absolute;left:0;top:0;height:100%;width:${pct}%;background:var(--black);border-radius:3px;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--mid-grey);margin-bottom:2px;">
+        <span>${firstName}</span><span>${lastName}</span>
+      </div>
+      <div class="text-xs" style="font-weight:600;">Currently: ${name}</div>
+    </div>`;
+  }).join('');
 
   $('guest-profile-panel').innerHTML = `
     <div style="display:flex;flex-direction:column;align-items:center;padding:24px 0 16px;">
@@ -1944,7 +2022,7 @@ function renderGuestProfile() {
       <div class="text-sm text-mid">${guest.nationality||''} · Age ${guest.age}</div>
     </div>
     <div class="info-grid">
-      <div class="info-cell"><div class="info-cell-label">Current Level</div><div class="info-cell-value">${levelLabel(latestLevel)}</div></div>
+      <div class="info-cell"><div class="info-cell-label">Current Level</div><div class="info-cell-value" style="font-size:12px;">${profileLevelSummary||'—'}</div></div>
       <div class="info-cell"><div class="info-cell-label">Lessons Taken</div><div class="info-cell-value">${entries.length}</div></div>
       <div class="info-cell"><div class="info-cell-label">Stay Until</div><div class="info-cell-value">${guest.stay_end||'—'}</div></div>
       <div class="info-cell"><div class="info-cell-label">Nationality</div><div class="info-cell-value">${guest.nationality||'—'}</div></div>
@@ -1952,14 +2030,7 @@ function renderGuestProfile() {
     <div class="subsection-heading">Progress Journey</div>
     <div class="card">
       <div style="padding:16px;">
-        <div style="font-size:12px;color:var(--mid-grey);margin-bottom:8px;">Level Progression</div>
-        <div style="position:relative;height:6px;background:var(--pearl);border-radius:3px;margin-bottom:6px;">
-          <div style="position:absolute;left:0;top:0;height:100%;width:${(((latestLevel||1)-1)/6*100).toFixed(0)}%;background:var(--black);border-radius:3px;"></div>
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--mid-grey);margin-bottom:8px;">
-          <span>Beginner</span><span>Expert</span>
-        </div>
-        <div class="text-sm text-mid">Currently at <strong>${levelNames[latestLevel]||''}</strong></div>
+        ${progressBars || '<div class="text-sm text-mid">No level data yet</div>'}
       </div>
     </div>
     <div style="margin-top:20px;">
